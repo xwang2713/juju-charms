@@ -15,6 +15,7 @@ Usage:
 2  Generate Juju configuration if haven't do also:
 2a juju generate-config
 2b juju switch local (assume you want to run local. Default is "amazon")
+
 3. Download this repository 
 4. Deploy HPCC Charm:   juju deploy  --repository=<path of downloaded juju-charms repository>  local:precise/hpcc 
 5. Check status: juju status
