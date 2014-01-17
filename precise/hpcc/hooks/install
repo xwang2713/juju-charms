@@ -1,0 +1,174 @@
+#!/bin/bash
+
+##
+## Set debugging
+##
+set -ux
+
+
+##
+## Current working directory
+##
+CWD=$(dirname $0)
+
+
+##
+## Detect Linux Distro
+##
+uname -a  | grep -q "x86_64"
+if [ $? -ne 0 ]
+then
+  juju-log "Only arch x86_64 is supported."
+  exit 1
+fi
+
+
+Distributor_ID=$(lsb_release -a | grep  "Distributor ID:" | \
+sed -n "s/.*:[[:space:]]*\(.*\)/\1/p")
+juju-log "Distriobutor_ID: $Distributor_ID"
+
+if [ "$Distributor_ID" == "CentOS" ]
+then
+   os_release=$(lsb_release -a | grep -e "Release:" | \
+   sed -n "s/.*:[[:space:]]*\(.*\)/\1/p")
+   if [ ${os_release:0:1} -eq 6 ]
+   then
+      os_id=el6
+   elif [ ${os_release:0:1} -eq 5 ]
+   then
+      os_id=el5
+   else
+      juju-log "Unsupported CenOS version: ${os_release}."
+      exit 1
+   fi
+
+elif [ "$Distributor_ID" == "Ubuntu" ]
+then
+   code_name=$(lsb_release -a | grep -e "Codename:" | \
+   sed -n "s/.*:[[:space:]]*\(.*\)/\1/p")
+   os_id=$code_name
+else
+   juju-log "Unsupported Linux for Juju/charm HPCC: $Distributor_ID"
+   exit 1
+fi
+juju-log "OS release version:  $os_id"
+
+
+##
+## HPCC prerequisites. 
+##
+dependence_dir=${CWD}/../dependences
+if [ ! -e ${dependence_dir}/${os_id} ]
+then
+   juju-log "Prequisites for $os_id hasn't been implemented yet."
+   exit 1
+fi
+${dependence_dir}/${os_id} 
+
+
+##
+## Download and install HPCC  
+##
+download_url=$(config-get download-url)
+if [ -z "$download_url" ]
+then
+  base_url=$(config-get  base-url)
+  hpcc_type=$(config-get  hpcc-type)
+  hpcc_version=$(config-get  hpcc-version)
+  hpcc_version_mmp=$(echo $hpcc_version | cut -d '-' -f1)
+  juju-log "hpcc_version_mmp: $hpcc_version_mmp"
+
+  declare -A type_detail
+  type_detail[CE]=community
+  type_detail[EE]=enterprise
+  type_detail[LN]=internal
+
+  package_name="hpccsystems-platform_${type_detail[$hpcc_type]}-${hpcc_version}"
+  download_url="${base_url}/${hpcc_type}-Candidate-${hpcc_version_mmp}"
+  download_url="${download_url}/bin/platform/$package_name"
+
+  if [ "$Distributor_ID" == "CentOS" ]
+  then
+    download_url="${download_url}.${os_id}_x86_64.rpm"
+  else
+     download_url="${download_url}${os_id}_amd64.deb"
+  fi
+fi
+
+juju-log "Download URL: $download_url"
+
+
+curl -s -O $download_url
+hpcc_package=$(basename $download_url)
+
+if [ "$Distributor_ID" == "CentOS" ]
+then
+   rpm -i $hpcc_package || exit 1
+else
+   DEBIAN_FRONTEND=noninteractive dpkg -i $hpcc_package || exit 1
+fi
+
+##
+## HPCC environment variables  
+##
+INSTALL_DIR=/opt/HPCCSystems
+CONFIG_DIR=/etc/HPCCSystems
+ENV_XML_FILE=environment.xml
+ENV_CONF_FILE=environment.conf
+PID_DIR=/var/run/HPCCSystems
+LOCK_DIR=/var/lock/HPCCSystems
+LOG_DIR=/var/log/HPCCSystems
+
+
+
+##
+## Set SSH keys  
+## Using shipped for now. Will provide script to generate new kyes later 
+##
+HPCC_CONFIG=${HPCC_CONFIG:-${CONFIG_DIR}/${ENV_CONF_FILE}}
+SECTION=${1:-DEFAULT}
+
+PATH_PREFIX=`cat ${HPCC_CONFIG} | sed -n "/\[${SECTION}\]/,/\[/p" | grep "^home *= *" | sed -e 's/^home *= *//'`
+USER_NAME=`cat ${HPCC_CONFIG} | sed -n "/\[${SECTION}\]/,/\[/p" | grep "^user *= *" | sed -e 's/^user *= *//'`
+
+PATH_HOME=${PATH_PREFIX}/${USER_NAME}
+echo $PATH_HOME
+if [ ! -d $PATH_HOME/.ssh ]; then
+        mkdir $PATH_HOME/.ssh
+fi
+rm -fr $PATH_HOME/.ssh/*
+cp $CWD/../ssh_keys/* $PATH_HOME/.ssh/
+if [ -e $PATH_HOME/.ssh/id_rsa.pub ]; then
+        cat $PATH_HOME/.ssh/id_rsa.pub > $PATH_HOME/.ssh/authorized_keys
+fi
+
+chown -R $USER_NAME:$USER_NAME $PATH_HOME/.ssh
+chmod 644 $PATH_HOME/.ssh/authorized_keys
+chmod 600 $PATH_HOME/.ssh/id_rsa
+chmod 644 $PATH_HOME/.ssh/id_rsa.pub
+
+##
+## Open the necessory firewall ports
+##
+if [ -e /usr/bin/open-port ];then
+   open-port 8010/TCP
+   open-port 18010/TCP
+   open-port 18002/TCP
+   open-port 18008/TCP
+   open-port 7070/TCP
+   open-port 8002/TCP
+   open-port 8008/TCP
+   open-port 9876/TCP
+   open-port 8877/TCP
+fi
+
+##
+## Create directory for stagging and tempory files
+##
+JUJU_HPCC_DIR=/var/lib/juju/hpcc
+if [ ! -e ${JUJU_HPCC_DIR} ]  
+then
+   mkdir $JUJU_HPCC_DIR
+   chmod -R 777 $JUJU_HPCC_DIR
+fi
+

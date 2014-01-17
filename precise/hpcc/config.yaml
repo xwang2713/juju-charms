@@ -1,0 +1,81 @@
+options:
+
+  base-url: 
+    type: string
+    default: http://cdn.hpccsystems.com/releases
+    #default: http://10.176.32.10/builds
+    description: HPCC download base URL
+
+  hpcc-version: 
+    type: string
+    #default: 4.2.0-4
+    default: 4.2.0-4
+    description: HPCC package version
+ 
+  hpcc-type:
+    type: string
+    default: CE
+    description: HPCC package type -  CE (Community Version) is only choice now.  
+  
+  
+  download-url:
+    type: string
+    default: ""
+    description: |
+      Download URL. If this is defined all above three download related settings
+      will be ignored.
+   
+
+# HPCC environment variable - Do we want to define them here?
+
+# Control when to run envgen
+  auto-envgen:  
+    type: int
+    default: 0
+    description: |
+      If true will run envgen to generate environment.xml when hpcc-cluster
+      relation changed. But this may have performance panelty when multiple
+      hpcc node added since envgen as well stop/start hpcc need run multiple
+      times
+
+  envgen-signature:
+    type: string
+    default: ""
+    description: |
+      When manually trigger envgen set this variable as:  
+        <supportnodes>-<roxienodes>-<thornodes>-<slavePerNode>
+      This will prevend unwanted envgen when roxienode/thornodes increase
+      with new node join.
+      Each node also will keep previous envgen-sigature value in a file
+      Only previous value is different than current envgen-sigture
+      will trigger envgen  from config-changed. It is for non-envrelated
+      config variable update, for example download-url for HPCC update. 
+      In this case we don't want to trigger envgen.
+
+  eclwatch-url:
+    type: string
+    default: ""
+    description: EclWatch URL 
+
+# Following are the parameters for envgen which will create environment.xml
+# Reference HPCC Platform envgen usage for more details
+
+  supportnodes:
+    type: int 
+    default: 0
+    description: Number of nodes to be used for non-Thor and non-Roxie components.
+
+  roxienodes:
+    type: int
+    default: 1
+    description: Number of nodes to be genrated for roxie.
+
+  thornodes:
+    type: int
+    default: 1
+    description: Number of nodes to be genrated for thor.
+
+  slavesPerNode:
+    type: int
+    default: 0
+    description: Number of thor slaves per node.

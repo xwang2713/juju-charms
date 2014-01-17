@@ -1,0 +1,92 @@
+JUJU_HPCC_DIR=/var/lib/juju/hpcc
+ENV_FILE="/etc/HPCCSystems/environment.xml"
+ENV_GEN="/opt/HPCCSystems/sbin/envgen"
+SIGNATURE_FILE=${JUJU_HPCC_DIR}/env_signature.txt
+LOCAL_IP_FILE=${JUJU_HPCC_DIR}/local_ip.txt
+IP_FILE=${JUJU_HPCC_DIR}/ip_file.txt
+ECLWATCH_URL_FILE=${JUJU_HPCC_DIR}/eclwatch_url.txt
+
+
+##
+## Save local ip to a file
+##
+function save_local_ip()
+{
+  HOSTNAME=$(unit-get public-address)
+  PRIVATE_HOSTNAME=$(unit-get private-address)
+  IP_ADDRESS=$(dig +short ${PRIVATE_HOSTNAME})
+  echo "$IP_ADDRESS" > $LOCAL_IP_FILE
+}
+
+##
+## Get currently defined envgen parameters
+##
+function get_envgen_configuration()
+{
+  support_nodes=$(config-get supportnodes)
+  thor_nodes=$(config-get thornodes)
+  roxie_nodes=$(config-get roxienodes)
+  slaves_per_node=$(config-get slavesPerNode)
+}
+
+
+##
+## Generate environemt.xml
+##
+function configure_cluster()
+{
+  juju-log "Stop HPCC"
+  service hpcc-init stop
+
+  juju-log "Run envgen ${ENV_GEN} -env ${ENV_FILE} -ipfile ${IP_FILE} -thornodes ${thor_nodes} -slavesPerNode ${slaves_per_node} -roxienodes ${roxie_nodes} -supportnodes ${support_nodes}"
+  "${ENV_GEN}" -env "${ENV_FILE}" -ipfile "${IP_FILE}" -thornodes "${thor_nodes}" -slavesPerNode "${slaves_per_node}" -roxienodes "${roxie_nodes}" -supportnodes "${support_nodes}"
+  [ $? -ne 0 ] && exit 1
+
+  juju-log "Start HPCC"
+  service hpcc-init start
+
+  save_evngen_signature
+  save_eclwatch_url
+}
+
+##
+## Save envgen signature
+##
+function save_evngen_signature()
+{
+
+   _signature="${support_nodes}-${roxie_nodes}-${thor_nodes}-${slaves_per_node}"
+   juju-log "Save envgen signature: $_signature"
+   echo "$_signature" > $SIGNATURE_FILE
+}
+
+
+##
+## Save EclWatch URL to a file
+##
+function save_eclwatch_url()
+{
+  juju-log "Update Check ECLWatch URL"
+
+  first_node=$(head -n 1 $IP_FILE | cut -d';' -f1)
+  cat $ENV_FILE | grep -q $first_node
+  [ $? -ne 0 ] && exit
+
+  eclwatch_port=$(cat $ENV_FILE | \
+  sed -n '
+    /<EspBinding/,/>/ {
+      s/port=\([[:digit:]]*\)/\1/p
+    }
+  ' | head -n 1 | cut -d '"' -f 2)
+
+  eclwatch_ip=$(cat $ENV_FILE | \
+  sed -n '
+    /<EspProcess/,/EspProcess>/ {
+      s/netAddress=\([[:digit:]]*\)/\1/p
+    }
+  ' |  cut -d '"' -f 2)
+
+  juju-log "set eclwatch-url http://${eclwatch_ip}:${eclwatch_port}"
+
+  echo "http://${eclwatch_ip}:${eclwatch_port}" > ${ECLWATCH_URL_FILE}
+}

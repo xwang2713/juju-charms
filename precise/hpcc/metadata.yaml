@@ -1,0 +1,22 @@
+name: hpcc
+summary: HPCC (High Performance Computing Cluster)
+maintainer: xiaoming.wang@lexisnexis.com 
+description: |
+  HPCC (High Performance Computing Cluster) is a massive
+  parallel-processing computing platform that solves Big Data problems.
+
+
+
+categories:
+  - server
+subordinate: false
+
+provides:
+  hpcc:
+    interface: hpcc
+#requires:
+#  requires-relation:
+#    interface: interface-name
+peers:
+  hpcc-cluster:
+    interface: hpcc-cluster
