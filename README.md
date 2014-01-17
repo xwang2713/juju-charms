@@ -7,7 +7,9 @@ HPCC Juju Charms
 Usage:
 
 1. Make sure you have juju-core and juju-local (assume you run local provider) packages installed on your Ubuntu system. If not, follow next instructions to instll them:
+
 1a. sudo apt-add-respository  ppa:juju/stable.
+
 1b. sudo apt-get update.
 1c. sudo apt-get install juju-core.
 1d. sudo apt-get install-local.
