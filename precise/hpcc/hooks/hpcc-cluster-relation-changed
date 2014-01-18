@@ -15,10 +15,11 @@ TMP_FILE=/tmp/ip_file.tmp
 
 echo "$(head -n 1  $LOCAL_IP_FILE);" > ${TMP_FILE}
 
-TOTAL_UNITS=0
+TOTAL_UNITS=1
 for UNIT in $(relation-list)
 do
    UNIT_ADDRESS=`relation-get netAddress ${UNIT}`
+   TOTAL_UNITS=$(expr ${TOTAL_UNITS} \+ 1)
    echo "${UNIT_ADDRESS};" >> "${TMP_FILE}"
 done
 
@@ -27,15 +28,22 @@ done
 ##
 awk '{ print length(), $0 | "sort -n" }' $TMP_FILE | awk '{ print $2 }'  > $IP_FILE
 
+[  ${TOTAL_UNITS}  -eq 1 ] && exit 
 
 ##
-## If auto-envgen set to 0 we need manually trigger
+## If auto-gen set to 0 we need manually trigger
 #  configure_cluster by running bin/config_hpcc.sh script later
 ##
-auto_envgen=$(config-get auto-envgen)
-juju-log "auto_envgen $auto_envgen"
-[  ${auto_envgen}  -eq 0 ] && exit 
+auto_gen=$(config-get auto-gen)
+juju-log "auto_gen $auto_gen"
+[  ${auto_gen}  -eq 0 ] && exit 
 
-get_envgen_configuration
-configure_cluster
+
+if [ ${auto_gen} -eq 1 ]
+then
+   configure_cluster ${TOTAL_UNITS}
+else 
+   get_envgen_configuration
+   configure_cluster
+fi
 

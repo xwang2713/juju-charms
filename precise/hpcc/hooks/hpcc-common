@@ -35,8 +35,21 @@ function get_envgen_configuration()
 ##
 function configure_cluster()
 {
+
+  number_of_nodes=$1
+
+  if [ -n "$number_of_nodes" ]
+  then
+     support_nodes=1
+     thor_nodes=$(expr $number_of_nodes \- 1)
+     roxie_nodes=$(expr $number_of_nodes \- 1)
+     slaves_per_node=1
+  fi
+
   juju-log "Stop HPCC"
   service hpcc-init stop
+
+   
 
   juju-log "Run envgen ${ENV_GEN} -env ${ENV_FILE} -ipfile ${IP_FILE} -thornodes ${thor_nodes} -slavesPerNode ${slaves_per_node} -roxienodes ${roxie_nodes} -supportnodes ${support_nodes}"
   "${ENV_GEN}" -env "${ENV_FILE}" -ipfile "${IP_FILE}" -thornodes "${thor_nodes}" -slavesPerNode "${slaves_per_node}" -roxienodes "${roxie_nodes}" -supportnodes "${support_nodes}"
