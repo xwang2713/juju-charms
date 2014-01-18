@@ -19,9 +19,9 @@ Usage:
 3. Download this repository 
 4. Deploy HPCC Charm:   juju deploy  --repository=<path of downloaded juju-charms repository>  local:precise/hpcc 
 5. Check status: juju status
-6. Add more HPCC nodes:  juju add-unit hpcc -n <number of node to add>  (without -n option one node will be added)
-7. Check with 'juju status'. When all nodes shows "started" you can configure the cluster:
-7a Go to precise/hpcc/bin
+6. Add more HPCC nodes:  juju add-unit hpcc -n <number of node to add>  (without -n option one node will be added). By default, if total number of nodes is N the cluster will be configured as: 1 support node, N-1 thor processes, and N-1 roxie nodes.Check with 'juju status'. Make sure all of them show state "started"
+7. Re-configure the cluster
+7a Going to precise/hpcc/bin
 7b ./configure_hpcc.sh -thornodes <num of thor>  -roxienodes <num of roxie>
 7c The clusters should be configured and started in 1 minute. Then you can query ECLWatch URL: ./get_url.sh
 8. To destory everthing: sudo juju destroy-environment. Run 'juju help commands' for more juju commands.  
