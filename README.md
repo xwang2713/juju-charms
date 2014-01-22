@@ -1,7 +1,8 @@
 juju-charms
 ===========
 
-HPCC Juju Charms
+HPCC Juju Charms.
+There is no build needed for Juju Charm. For development and maitenance reference Juju Documentation: https://juju.ubuntu.com/docs/
 
 
 Usage:
