@@ -1,48 +1,58 @@
 # Overview
 
-Describe the intended usage of this charm and anything unique about how this charm relates to others here. 
+[HPCC](http://HPCCSystems.com) (High Performance Computing Cluster) is a massive parallel-processing computing platform that solves Big Data problems. HPCC is a proven and battle-tested platform for manipulating, transforming, querying, and data warehousing Big Data.
 
-This README will be displayed in the Charm Store, it should be either Markdown or RST. Ideal READMEs include instructions on how to use the charm, expected usage, and charm features that your audience might be interested in. For an example of a well written README check out Hadoop: http://jujucharms.com/charms/precise/hadoop
+The HPCC Systems architecture incorporates Thor and Roxie clusters, as well as common middleware support components, an external communications layer, client interfaces which provide both end-user services and system management tools, and auxiliary components to support monitoring and to facilitate loading and storing of file system data from external sources.  
+  
+An HPCC environment can include only Thor clusters, or both Thor and Roxie clusters. The HPCC Juju charm creates a cluster which contains both, but you can customize it after deployment.
+ 
+See [How it Works](http://www.hpccsystems.com/Why-HPCC/How-it-works)  for more details. 
 
-Use this as a Markdown reference if you need help with the formatting of this README: http://askubuntu.com/editing-help
+The HPCC Juju Charm encapsulates best practice configurations for the HPCC Platform.  You can use a Juju charm to stand up an HPCC Platform on:
 
-This charm provides [service](http://example.com). Add a description here of what the service itself actually does.
+- Local Provider (LXC)
 
+- Amazon Web Services Cloud
+ 
 # Usage
 
-Step by step instructions on using the charm:
+## General Usage
 
-    juju deploy servicename
+1. To deploy an HPCC Cluster:
 
-and so on. If you're providing a web service or something that the end user needs to go to, tell them here, especially if you're deploying a service that might listen to a non-default port. 
+    `juju deploy hpcc <cluster_name>`
 
-You can then browse to http://ip-address to configure the service. 
+	***For example:***
 
-## Scale out Usage
+	`juju deploy hpcc cluster1`
 
-If the charm has any recommendations for running at scale, outline them in examples here. For example if you have a memcached relation that improves performance, mention it here. 
+1. To check the status , run 
+	juju status  
+	
+	You also can log into the node to check if HPCC is properly installed. 
 
-## Known Limitations and Issues
+	`juju ssh cluster1/0` 
 
-This not only helps users but gives people a place to start if they want to help you add features to your charm. 
+1.  Once HPCC is properly installed, you can add more nodes using this command:
+ 
+	`juju add-unit -n <#_of_nodes_to_add>`
+
+
+1. You can expose the HPCC cluster by running:
+
+	`juju expose <cluster_name>` 
+
 
 # Configuration
 
-The configuration options will be listed on the charm store, however If you're making assumptions or opinionated decisions in the charm (like setting a default administrator password), you should detail that here so the user knows how to change it immediately, etc.
+After deploying and adding nodes, you can tweak various options to optimize your HPCC deployment to meet your needs. 
 
-# Contact Information
+See [HPCC Systems Web site](http://HPCCSystems.com) for more details. 
+ 
 
-Though this will be listed in the charm store itself don't assume a user will know that, so include that information here:
+# HPCC Systems Contact Information
 
-## Upstream Project Name
+[HPCC Systems Web site](http://HPCCSystems.com)
 
-- Upstream website
-- Upstream bug tracker
-- Upstream mailing list or contact information
-- Feel free to add things if it's useful for users
-
-## Charm Contact
-
-Though the charm store lists a maintainer, a URL, and where to report bugs you might want to use this area to expand on different contact information if you want. 
-
-* Be sure to remove the templated parts before submitting to https://launchpad.net/charms for inclusion in the charm store.
+For support, visit the HPCC Community Forums: 
+[HPCC Community Forums](http://hpccsystems.com/bb/index.php?sid=0bda2dddb2ea50418357171d33b11e5f)

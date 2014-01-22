@@ -19,14 +19,17 @@ TOTAL_UNITS=1
 for UNIT in $(relation-list)
 do
    UNIT_ADDRESS=`relation-get netAddress ${UNIT}`
-   TOTAL_UNITS=$(expr ${TOTAL_UNITS} \+ 1)
-   echo "${UNIT_ADDRESS};" >> "${TMP_FILE}"
+   if [ -n "${UNIT_ADDRESS}" ]
+   then
+      TOTAL_UNITS=$(expr ${TOTAL_UNITS} \+ 1)
+      echo "${UNIT_ADDRESS};" >> "${TMP_FILE}"
+   fi
 done
 
 ##
 ## Sort IPs
 ##
-awk '{ print length(), $0 | "sort -n" }' $TMP_FILE | awk '{ print $2 }'  > $IP_FILE
+cat $TMP_FILE | sort -n -t . -k 1,1 -k 2,2 -k 3,3 -k 4,4  > $IP_FILE
 
 [  ${TOTAL_UNITS}  -eq 1 ] && exit 
 

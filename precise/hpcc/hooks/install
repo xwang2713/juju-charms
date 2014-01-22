@@ -63,7 +63,7 @@ then
    juju-log "Prequisites for $os_id hasn't been implemented yet."
    exit 1
 fi
-${dependence_dir}/${os_id} 
+${dependence_dir}/${os_id}  || exit 1
 
 
 ##
