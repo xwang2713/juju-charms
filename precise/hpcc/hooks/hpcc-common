@@ -14,7 +14,7 @@ function save_local_ip()
 {
   HOSTNAME=$(unit-get public-address)
   PRIVATE_HOSTNAME=$(unit-get private-address)
-  IP_ADDRESS=$(dig +short ${PRIVATE_HOSTNAME})
+  IP_ADDRESS=$(dig +short ${PRIVATE_HOSTNAME} | tail -n 1)
   echo "$IP_ADDRESS" > $LOCAL_IP_FILE
 }
 
