@@ -29,4 +29,3 @@ juju-log "composed_signature: $composed_signature"
 
 
 configure_cluster
-

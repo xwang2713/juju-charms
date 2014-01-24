@@ -55,7 +55,7 @@ juju-log "OS release version:  $os_id"
 
 
 ##
-## HPCC prerequisites. 
+## HPCC prerequisites
 ##
 dependence_dir=${CWD}/../dependences
 if [ ! -e ${dependence_dir}/${os_id} ]
@@ -67,7 +67,7 @@ ${dependence_dir}/${os_id}  || exit 1
 
 
 ##
-## Download and install HPCC  
+## Download and install HPCC
 ##
 download_url=$(config-get download-url)
 if [ -z "$download_url" ]
@@ -109,7 +109,7 @@ else
 fi
 
 ##
-## HPCC environment variables  
+## HPCC environment variables
 ##
 INSTALL_DIR=/opt/HPCCSystems
 CONFIG_DIR=/etc/HPCCSystems
@@ -122,8 +122,8 @@ LOG_DIR=/var/log/HPCCSystems
 
 
 ##
-## Set SSH keys  
-## Using shipped for now. Will provide script to generate new kyes later 
+## Set SSH keys
+## Using shipped for now. Will provide script to generate new kyes later
 ##
 HPCC_CONFIG=${HPCC_CONFIG:-${CONFIG_DIR}/${ENV_CONF_FILE}}
 SECTION=${1:-DEFAULT}
@@ -166,9 +166,8 @@ fi
 ## Create directory for stagging and tempory files
 ##
 JUJU_HPCC_DIR=/var/lib/juju/hpcc
-if [ ! -e ${JUJU_HPCC_DIR} ]  
+if [ ! -e ${JUJU_HPCC_DIR} ]
 then
    mkdir $JUJU_HPCC_DIR
    chmod -R 777 $JUJU_HPCC_DIR
 fi
-

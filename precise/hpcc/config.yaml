@@ -1,36 +1,36 @@
 options:
 
-  base-url: 
+  base-url:
     type: string
     default: http://cdn.hpccsystems.com/releases
     description: HPCC download base URL
 
-  hpcc-version: 
+  hpcc-version:
     type: string
     default: 4.2.0-4
     description: HPCC package version
- 
+
   hpcc-type:
     type: string
     default: CE
-    description: HPCC package type -  CE (Community Edition) is only choice now.  
-  
-  
+    description: HPCC package type -  CE (Community Edition) is only choice now.
+
+
   download-url:
     type: string
     default: ""
     description: |
       Download URL. If this is defined all above three download related settings are ignored.
-   
+
 
 # HPCC environment variable - Do we want to define them here?
 
 # Control when to run envgen
-  auto-gen:  
+  auto-gen:
     type: int
     default: 1
     description: |
-      0: will not generate HPCC cluster configuration in relation-changed hook. 
+      0: will not generate HPCC cluster configuration in relation-changed hook.
          User need manually run bin/config_hpcc.sh script to do it.
       1: automatically generate HPCC cluster configuration in relation-changed
          hook with following topology with nodes N:
@@ -47,12 +47,12 @@ options:
     type: string
     default: ""
     description: |
-      When manually trigger envgen set this variable as:  
+      When manually trigger envgen set this variable as:
         <supportnodes>-<roxienodes>-<thornodes>-<slavePerNode>
       This will prevent unwanted running of envgen when roxienode/thornodes increase with new node join.
       Each node also will keep previous envgen-sigature value in a file
       Only previous value is different than current envgen-signature
-      will trigger envgen  from config-changed. It is for non-envgen related config variable update,(for example: download-url for HPCC update). 
+      will trigger envgen  from config-changed. It is for non-envgen related config variable update,(for example: download-url for HPCC update).
       In this case, we don't want to trigger envgen.
 
 
@@ -60,7 +60,7 @@ options:
 # Reference HPCC Platform envgen usage for more details
 
   supportnodes:
-    type: int 
+    type: int
     default: 1
     description: Number of nodes to be used for non-Thor and non-Roxie components.
 

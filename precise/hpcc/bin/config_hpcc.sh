@@ -7,35 +7,35 @@ function usage()
     Trigger HPCC envgen with charm configure changed hook
     Usage:  $(basename $0) <options>
     where
-       -name <service name> :  
-          Juju charm service name. Then name can be provided at charm 
-          deploy name. The default is the same as charm name.  This will 
-          identify HPCC cluster. 
+       -name <service name> :
+          Juju charm service name. Then name can be provided at charm
+          deploy name. The default is the same as charm name.  This will
+          identify HPCC cluster.
 
-       -supportnodes <number of support nodes>: 
-          Number of nodes to be used for non-Thor and non-Roxie components. 
-          If not specified or specified as 0, thor and roxie nodes may 
-          overlap with support nodes. If an invalid value is provided, 
+       -supportnodes <number of support nodes>:
+          Number of nodes to be used for non-Thor and non-Roxie components.
+          If not specified or specified as 0, thor and roxie nodes may
+          overlap with support nodes. If an invalid value is provided,
           support nodes are treated to be 0
 
-       -roxienodes <number of roxie nodes>: 
-          Number of nodes to be generated for roxie. If not specified or 
+       -roxienodes <number of roxie nodes>:
+          Number of nodes to be generated for roxie. If not specified or
           specified as 0, no roxie nodes are generated
 
-       -thornodes <number of thor nodes>: Number of nodes to be generated 
-          for thor slaves. A node for thor master is automatically added. 
+       -thornodes <number of thor nodes>: Number of nodes to be generated
+          for thor slaves. A node for thor master is automatically added.
           If not specified or specified as 0, no thor nodes are generated
 
-       -slavespernode <number of thor slaves per node>: 
+       -slavespernode <number of thor slaves per node>:
           Number of thor nodes per slave.
 
 
-       -list:  
+       -list:
           List envgen optios only.
 
-       -updateonly :  
-          Update config values only. Will not trigger envgen. This is 
-          mainly for update values before add new nodes. So new nodes 
+       -updateonly :
+          Update config values only. Will not trigger envgen. This is
+          mainly for update values before add new nodes. So new nodes
           relation changed hooks will generate desired environment.xml.
 
     The value with "+" mean add to original number.
@@ -47,13 +47,13 @@ EOF
 function get_service_information()
 {
    _options=
-   
-   [ -n "${service[service_name]}" ] && _options="-s ${service[service_name]}" 
-   
+
+   [ -n "${service[service_name]}" ] && _options="-s ${service[service_name]}"
+
    service_info=$(python ${ABS_CWD}/parse_status.py $_options)
-   service_list=( $service_info )  
+   service_list=( $service_info )
    for item in "${service_list[@]}"
-   do 
+   do
        key=$(echo $item | cut -d '=' -f1)
        value=$(echo $item | cut -d '=' -f2)
        [ -n "$key" ] && service["$key"]=$value
@@ -62,8 +62,8 @@ function get_service_information()
 
 function get_current_config()
 {
-   juju get ${service[service_name]} > /tmp/${service[service_name]}.cfg 
-   config_info=$(python ${CWD}/parse_config.py /tmp/hpcc.cfg)
+   juju get ${service[service_name]} > /tmp/${service[service_name]}.cfg
+   config_info=$(python ${CWD}/parse_config.py /tmp/${service[service_name]}.cfg)
    config_list=( $config_info )
    for item in "${config_list[@]}"
    do
@@ -71,26 +71,26 @@ function get_current_config()
        value=$(echo $item | cut -d '=' -f2)
        [ -n "$key" ] && config["$key"]=$value
    done
-   current_signature="${config[supportnodes]}-${config[roxienodes]}-${config[thornodes]}-${config[slavesPerNode]}"  
+   current_signature="${config[supportnodes]}-${config[roxienodes]}-${config[thornodes]}-${config[slavesPerNode]}"
 }
 
 
 function display_current_configuration()
 {
-   printf "%s%-15s: %8d\n" "$INDENT" "Support nodes" ${config[supportnodes]}  
-   printf "%s%-15s: %8d\n" "$INDENT" "Roxie nodes" ${config[roxienodes]}  
-   printf "%s%-15s: %8d\n" "$INDENT" "Thor nodes" ${config[thornodes]}  
-   printf "%s%-15s: %8d\n" "$INDENT" "Slaves per node" ${config[slavesPerNode]}  
+   printf "%s%-15s: %8d\n" "$INDENT" "Support nodes" ${config[supportnodes]}
+   printf "%s%-15s: %8d\n" "$INDENT" "Roxie nodes" ${config[roxienodes]}
+   printf "%s%-15s: %8d\n" "$INDENT" "Thor nodes" ${config[thornodes]}
+   printf "%s%-15s: %8d\n" "$INDENT" "Slaves per node" ${config[slavesPerNode]}
 
    #envgen_status="Current environment.xml probably already has above settings"
-   #if [ "$current_signation" != "${config[slavesPerNode]}" ]  
+   #if [ "$current_signation" != "${config[slavesPerNode]}" ]
    #then
    #   envgen_status="Current environment.xml probably doesnot have above settings"
    #fi
-   #printf "%s%-15s: %s\n"  "$INDENT" "Status" "$envgen_status"  
+   #printf "%s%-15s: %s\n"  "$INDENT" "Status" "$envgen_status"
 
-   printf "\n" 
-   
+   printf "\n"
+
 }
 
 function update_value()
@@ -100,10 +100,10 @@ function update_value()
 
    input_value=$2
 
-   echo $input_value | grep -q -e "^[[:digit:]]" 
+   echo $input_value | grep -q -e "^[[:digit:]]"
    [ $? -eq 0 ] && echo "${input_value}" && return
 
-   echo $input_value | grep -q -e "^+" 
+   echo $input_value | grep -q -e "^+"
    [ $? -eq 0 ] &&  input_value=${input_value:1}
 
    echo "$(expr $original_value \+ ${input_value})"
@@ -112,36 +112,36 @@ function update_value()
 
 function update_configuration()
 {
-   printf "%s%-15s  %8s %8s\n" "$INDENT" "ENVGEN OPTIONS" "BEFORE" "NOW"  
-   printf "%s%s\n" "$INDENT" "----------------------------------"  
+   printf "%s%-15s  %8s %8s\n" "$INDENT" "ENVGEN OPTIONS" "BEFORE" "NOW"
+   printf "%s%s\n" "$INDENT" "----------------------------------"
 
-   supportnodes=$(update_value ${config[supportnodes]}  ${inputs[supportnodes]})  
+   supportnodes=$(update_value ${config[supportnodes]}  ${inputs[supportnodes]})
    printf "%s%-15s: %8d %8d\n" "$INDENT" "Support nodes" \
            ${config[supportnodes]} $supportnodes
    config[supportnodes]=$supportnodes
 
-   roxienodes=$(update_value ${config[roxienodes]}  ${inputs[roxienodes]})  
+   roxienodes=$(update_value ${config[roxienodes]}  ${inputs[roxienodes]})
    printf "%s%-15s: %8d %8d\n" "$INDENT" "Roxie nodes" \
            ${config[roxienodes]} $roxienodes
    config[roxienodes]=$roxienodes
 
-   thornodes=$(update_value ${config[thornodes]}  ${inputs[thornodes]})  
+   thornodes=$(update_value ${config[thornodes]}  ${inputs[thornodes]})
    printf "%s%-15s: %8d %8d\n" "$INDENT" "Thor nodes" \
            ${config[thornodes]} $thornodes
    config[thornodes]=$thornodes
 
-   slavesPerNode=$(update_value ${config[slavesPerNode]}  ${inputs[slavesPerNode]})  
+   slavesPerNode=$(update_value ${config[slavesPerNode]}  ${inputs[slavesPerNode]})
    printf "%s%-15s: %8d %8d\n" "$INDENT" "Slaves Per Node" \
            ${config[slavesPerNode]} $slavesPerNode
    config[slavesPerNode]=$slavesPerNode
 
-   printf "\n" 
-   
+   printf "\n"
+
    if [ $update_only -eq 0 ]
    then
-      config[envgen_signature]="${config[supportnodes]}-${config[roxienodes]}-${config[thornodes]}-${config[slavesPerNode]}"  
+      config[envgen_signature]="${config[supportnodes]}-${config[roxienodes]}-${config[thornodes]}-${config[slavesPerNode]}"
    fi
-    
+
 }
 
 ##
@@ -167,7 +167,7 @@ inputs[slavesPerNode]=
 list_only=0
 update_only=0
 
-declare -A config 
+declare -A config
 declare -A service
 service[service_name]=
 
@@ -221,9 +221,9 @@ get_current_config
 #echo "update_only=$update_only"
 
 printf "\n"
-printf "%s%-15s: %-20s\n" "$INDENT" "CHARM NAME" "$CHARM_NAME" 
-printf "%s%-15s: %-20s\n" "$INDENT" "SERVICE NAME" "${service[service_name]}" 
-printf "%s%-15s: %-20s\n" "$INDENT" "UNIT NUMBER" "${service[unit_number]}" 
+printf "%s%-15s: %-20s\n" "$INDENT" "CHARM NAME" "$CHARM_NAME"
+printf "%s%-15s: %-20s\n" "$INDENT" "SERVICE NAME" "${service[service_name]}"
+printf "%s%-15s: %-20s\n" "$INDENT" "UNIT NUMBER" "${service[unit_number]}"
 printf "\n"
 
 if [ $list_only -eq 1 ]
@@ -242,5 +242,3 @@ juju set ${service[service_name]} \
            roxienodes=${config[roxienodes]} \
            supportnodes=${config[supportnodes]} \
            slavesPerNode=${config[slavesPerNode]}
-
-

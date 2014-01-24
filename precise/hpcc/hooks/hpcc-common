@@ -49,8 +49,6 @@ function configure_cluster()
   juju-log "Stop HPCC"
   service hpcc-init stop
 
-   
-
   juju-log "Run envgen ${ENV_GEN} -env ${ENV_FILE} -ipfile ${IP_FILE} -thornodes ${thor_nodes} -slavesPerNode ${slaves_per_node} -roxienodes ${roxie_nodes} -supportnodes ${support_nodes}"
   "${ENV_GEN}" -env "${ENV_FILE}" -ipfile "${IP_FILE}" -thornodes "${thor_nodes}" -slavesPerNode "${slaves_per_node}" -roxienodes "${roxie_nodes}" -supportnodes "${support_nodes}"
   [ $? -ne 0 ] && exit 1

@@ -37,7 +37,7 @@ def GetServiceName():
    for key in config["services"].keys():
       if (pattern.match(config["services"][key]["charm"])):
          service_name = key
-         print("service_name=" + key) 
+         print("service_name=" + key)
          break
 
 def GetNumOfUnites():
@@ -48,7 +48,7 @@ def GetNumOfUnites():
 
    if (service_name == ""):
       return
-   
+
    number_of_units = len(config["services"][service_name]["units"].keys())
    print("unit_number=" + str(number_of_units))
 
@@ -117,5 +117,5 @@ if __name__ == "__main__":
       os.system("juju status > " + status_file_name)
 
    LoadYamlObject()
-   
+
    ParseStatus()
