@@ -11,7 +11,7 @@
 #juju-log Relation members:
 #relation-list
 
-TMP_FILE=/tmp/ip_file.tmp
+TMP_FILE=${JUJU_HPCC_DIR}/ip_file.tmp
 
 echo "$(head -n 1  $LOCAL_IP_FILE);" > ${TMP_FILE}
 

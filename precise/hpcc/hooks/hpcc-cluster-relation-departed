@@ -5,7 +5,7 @@
 juju-log $JUJU_REMOTE_UNIT departed
 
 
-TMP_FILE=/tmp/ip_file.tmp
+TMP_FILE=/var/lib/juju/hpcc_data/ip_file.tmp
 
 LOCAL_IP_FILE=/var/lib/juju/hpcc/local_ip.txt
 IP_FILE=/var/lib/juju/hpcc/ip_file.txt

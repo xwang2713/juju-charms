@@ -49,12 +49,12 @@ if [ -z "$unit_name" ]
 then
   get_service_information
   unit_name=$(juju status | grep "${service_name}/" | \
-    head -n 1 | cut -d: -f1)
+    /usr/bin/head -n 1 | cut -d: -f1)
 fi
 
 juju scp ${unit_name}:/etc/HPCCSystems/environment.xml $LOCAL_ENV_FILE  > /dev/null 2>&1
 
-juju scp ${unit_name}:/var/lib/juju/hpcc/${eclwatch_url_file} $LOCAL_URL_FILE > /dev/null 2>&1
+juju scp ${unit_name}:/var/lib/juju/hpcc_data/${eclwatch_url_file} $LOCAL_URL_FILE > /dev/null 2>&1
 
 if [ -e $LOCAL_URL_FILE ]
 then

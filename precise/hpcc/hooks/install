@@ -165,7 +165,7 @@ fi
 ##
 ## Create directory for stagging and tempory files
 ##
-JUJU_HPCC_DIR=/var/lib/juju/hpcc
+JUJU_HPCC_DIR=/var/lib/juju/hpcc_data
 if [ ! -e ${JUJU_HPCC_DIR} ]
 then
    mkdir $JUJU_HPCC_DIR

@@ -20,7 +20,8 @@ options:
     type: string
     default: ""
     description: |
-      Download URL. If this is defined all above three download related settings are ignored.
+      Download URL. If this is defined all above three download related settings 
+      are ignored.
 
 
 # HPCC environment variable - Do we want to define them here?

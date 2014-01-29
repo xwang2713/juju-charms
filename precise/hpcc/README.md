@@ -22,7 +22,7 @@ The HPCC Juju Charm encapsulates best practice configurations for the HPCC  Syst
 
     `juju deploy hpcc <cluster_name>`
 
-        ***For example:***
+    **For example:**
 
         'juju deploy hpcc cluster1`
 
@@ -39,7 +39,7 @@ Once the service is deployed and running, you can find the address for the GUI b
 
         `juju add-unit <cluster_name> -n <#_of_nodes_to_add>`
 
-        ***For example:***
+    **For example:**
 
         `juju add-unit cluster1 -n 3`
 
@@ -63,8 +63,22 @@ When deploying to Amazon Web Services Cloud, you must open these ports for exter
 
 # Configuration
 
-After deploying and adding nodes, you can tweak various options to optimize your HPCC deployment to meet your needs.
+When you use the `juju add-unit` command to add nodes, scripts are called automatically to provide a default configuration. 
 
+If you want to configure manually, set **auto-gen** to **0**, wait for all nodes to be in a "started" state, then call the **config_hpcc.sh**  script using the following parameters:
+
+`./config_hpcc.sh -thornodes <# of thor nodes> -roxienodes <# of roxie nodes> -supportnodes <# of support nodes> -slavespernode <#of thor slaves per node> 
+`
+
+Another useful script reports the URL for the ECL Watch node. Call the **get-url.sh** script to display the cluster configuration and the URL for the ECL Watch service.
+
+### ssh-keys ###
+Currently the hpcc charm uses a pre-generated ssh-key pair to configure nodes. If you have security concerns, you should download the charm locally and generate new key pair, *id_rsa* and *id_rsa.pub* (using ssh-keygen) and replace the ones provided in the  **hpcc/ssh_keys** directory
+
+### Nest Steps ###
+
+After deploying and adding nodes, you can tweak various options to optimize your HPCC deployment to meet your needs.
+ 
 See [HPCC Systems Web site](http://HPCCSystems.com) for more details.
 
 
