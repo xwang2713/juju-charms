@@ -137,7 +137,21 @@ if [ ! -d $PATH_HOME/.ssh ]; then
         mkdir $PATH_HOME/.ssh
 fi
 rm -fr $PATH_HOME/.ssh/*
-cp $CWD/../ssh_keys/* $PATH_HOME/.ssh/
+
+PUB_KEY=$(config-get ssh-key-public)
+PRI_KEY=$(config-get ssh-key-private)
+
+if [ -z "$PUB_KEY" ] || [ -z "$PRI_KEY" ] 
+then
+    juju-log "Use default SSH Key pairs."
+    PUB_KEY=$(cat $CWD/../ssh_keys/id_rsa.pub)
+    PRI_KEY=$(cat $CWD/../ssh_keys/id_rsa)
+else
+    juju-log "Use user supplied SSH Key pairs."
+fi
+
+echo "$PUB_KEY" > $PATH_HOME/.ssh/id_rsa.pub
+echo "$PRI_KEY" > $PATH_HOME/.ssh/id_rsa
 if [ -e $PATH_HOME/.ssh/id_rsa.pub ]; then
         cat $PATH_HOME/.ssh/id_rsa.pub > $PATH_HOME/.ssh/authorized_keys
 fi
@@ -165,9 +179,9 @@ fi
 ##
 ## Create directory for stagging and tempory files
 ##
-JUJU_HPCC_DIR=/var/lib/juju/hpcc_data
+JUJU_HPCC_DIR=/var/lib/HPCCSystems/charm
 if [ ! -e ${JUJU_HPCC_DIR} ]
 then
-   mkdir $JUJU_HPCC_DIR
+   mkdir -p $JUJU_HPCC_DIR
    chmod -R 777 $JUJU_HPCC_DIR
 fi

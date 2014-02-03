@@ -1,4 +1,4 @@
-JUJU_HPCC_DIR=/var/lib/juju/hpcc_data
+JUJU_HPCC_DIR=/var/lib/HPCCSystems/charm
 ENV_FILE="/etc/HPCCSystems/environment.xml"
 ENV_GEN="/opt/HPCCSystems/sbin/envgen"
 SIGNATURE_FILE=${JUJU_HPCC_DIR}/env_signature.txt

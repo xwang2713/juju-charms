@@ -23,6 +23,17 @@ options:
       Download URL. If this is defined all above three download related settings 
       are ignored.
 
+  ssh-key-public:
+    type: string
+    default: ""
+    description: The content of public SSH Key
+
+  ssh-key-private:
+    type: string
+    default: ""
+    description: The content of private SSH Key
+
+
 
 # HPCC environment variable - Do we want to define them here?
 

@@ -73,7 +73,10 @@ If you want to configure manually, set **auto-gen** to **0**, wait for all nodes
 Another useful script reports the URL for the ECL Watch node. Call the **get-url.sh** script to display the cluster configuration and the URL for the ECL Watch service.
 
 ### ssh-keys ###
-Currently the hpcc charm uses a pre-generated ssh-key pair to configure nodes. If you have security concerns, you should download the charm locally and generate new key pair, *id_rsa* and *id_rsa.pub* (using ssh-keygen) and replace the ones provided in the  **hpcc/ssh_keys** directory
+Currently the hpcc charm uses a pre-generated ssh-key pair to configure nodes. 
+
+If you have security concerns, you can generate new key pair, *id_rsa* and *id_rsa.pub* (using ssh-keygen) and then copy and paste into the two variables (*ssh-key-public* and *ssh-key-private*) in the configuration file (config.yaml) or in the Juju canvas configuration settings.  
+
 
 ### Nest Steps ###
 
