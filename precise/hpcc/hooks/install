@@ -138,20 +138,26 @@ if [ ! -d $PATH_HOME/.ssh ]; then
 fi
 rm -fr $PATH_HOME/.ssh/*
 
+set +x
 PUB_KEY=$(config-get ssh-key-public)
 PRI_KEY=$(config-get ssh-key-private)
+set -x
 
 if [ -z "$PUB_KEY" ] || [ -z "$PRI_KEY" ] 
 then
     juju-log "Use default SSH Key pairs."
+    set +x
     PUB_KEY=$(cat $CWD/../ssh_keys/id_rsa.pub)
     PRI_KEY=$(cat $CWD/../ssh_keys/id_rsa)
+    set -x
 else
     juju-log "Use user supplied SSH Key pairs."
 fi
 
+set +x
 echo "$PUB_KEY" > $PATH_HOME/.ssh/id_rsa.pub
 echo "$PRI_KEY" > $PATH_HOME/.ssh/id_rsa
+set -x
 if [ -e $PATH_HOME/.ssh/id_rsa.pub ]; then
         cat $PATH_HOME/.ssh/id_rsa.pub > $PATH_HOME/.ssh/authorized_keys
 fi
