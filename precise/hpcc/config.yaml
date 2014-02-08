@@ -15,6 +15,18 @@ options:
     default: CE
     description: HPCC package type -  CE (Community Edition) is only choice now.
 
+  package-checksum:
+    type: string
+    default: bc2fb0ad5f9fa1eaf7a33483ec31bfa3
+    description: |
+      HPCC package checksum. The default the value is for HPCC CE 4.2.0-4 Ubunut
+      12.04 amd64. User can get other package checksum from:
+           http://hpccsystems.com/download
+      In future HPCCSystem download site will provide checksum file which will
+      allow automatically verification without this setting.
+      Set this value to empty string to skip the validation when download the
+      package.
+
 
   download-url:
     type: string

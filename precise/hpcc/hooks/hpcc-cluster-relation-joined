@@ -9,3 +9,13 @@ juju-log $JUJU_REMOTE_UNIT joined
 save_local_ip
 
 relation-set name="${HOSTNAME}" netAddress="${IP_ADDRESS}"
+
+PUB_KEY=$(config-get ssh-key-public)
+PRI_KEY=$(config-get ssh-key-private)
+if [ -z "$PUB_KEY" ] || [ -z "$PUB_KEY" ]
+then
+   relation-set reset-ssh-keys=1
+   create_and_set_ssh_keys
+else
+   relation-set reset-ssh-keys=0
+fi

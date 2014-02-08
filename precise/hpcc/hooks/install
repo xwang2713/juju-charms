@@ -11,6 +11,8 @@ set -ux
 ##
 CWD=$(dirname $0)
 
+. ${CHARM_DIR}/hooks/hpcc-common
+
 
 ##
 ## Detect Linux Distro
@@ -101,6 +103,18 @@ juju-log "Download URL: $download_url"
 curl -s -O $download_url
 hpcc_package=$(basename $download_url)
 
+expected_checksum=$(config-get package-checksum)
+if [ -n "$expected_checksum" ]
+then 
+   downloaded_checksum=$(md5sum ${hpcc_package} | cut -d ' ' -f1)
+   if [ "$expected_checksum" != "${downloaded_checksum}" ]
+   then
+      juju-log "Package checksum don't match. Expected ${expected_checksum} but get ${downloaded_checksum}" 
+      exit 1
+   fi
+   
+fi
+
 if [ "$Distributor_ID" == "CentOS" ]
 then
    rpm -i $hpcc_package || exit 1
@@ -108,31 +122,14 @@ else
    DEBIAN_FRONTEND=noninteractive dpkg -i $hpcc_package || exit 1
 fi
 
-##
-## HPCC environment variables
-##
-INSTALL_DIR=/opt/HPCCSystems
-CONFIG_DIR=/etc/HPCCSystems
-ENV_XML_FILE=environment.xml
-ENV_CONF_FILE=environment.conf
-PID_DIR=/var/run/HPCCSystems
-LOCK_DIR=/var/lock/HPCCSystems
-LOG_DIR=/var/log/HPCCSystems
-
-
 
 ##
 ## Set SSH keys
 ## Using shipped for now. Will provide script to generate new kyes later
 ##
-HPCC_CONFIG=${HPCC_CONFIG:-${CONFIG_DIR}/${ENV_CONF_FILE}}
-SECTION=${1:-DEFAULT}
-
-PATH_PREFIX=`cat ${HPCC_CONFIG} | sed -n "/\[${SECTION}\]/,/\[/p" | grep "^home *= *" | sed -e 's/^home *= *//'`
-USER_NAME=`cat ${HPCC_CONFIG} | sed -n "/\[${SECTION}\]/,/\[/p" | grep "^user *= *" | sed -e 's/^user *= *//'`
-
-PATH_HOME=${PATH_PREFIX}/${USER_NAME}
+parse_env_config
 echo $PATH_HOME
+
 if [ ! -d $PATH_HOME/.ssh ]; then
         mkdir $PATH_HOME/.ssh
 fi
@@ -141,45 +138,24 @@ rm -fr $PATH_HOME/.ssh/*
 set +x
 PUB_KEY=$(config-get ssh-key-public)
 PRI_KEY=$(config-get ssh-key-private)
+set_ssh_keys
 set -x
-
-if [ -z "$PUB_KEY" ] || [ -z "$PRI_KEY" ] 
-then
-    juju-log "Use default SSH Key pairs."
-    set +x
-    PUB_KEY=$(cat $CWD/../ssh_keys/id_rsa.pub)
-    PRI_KEY=$(cat $CWD/../ssh_keys/id_rsa)
-    set -x
-else
-    juju-log "Use user supplied SSH Key pairs."
-fi
-
-set +x
-echo "$PUB_KEY" > $PATH_HOME/.ssh/id_rsa.pub
-echo "$PRI_KEY" > $PATH_HOME/.ssh/id_rsa
-set -x
-if [ -e $PATH_HOME/.ssh/id_rsa.pub ]; then
-        cat $PATH_HOME/.ssh/id_rsa.pub > $PATH_HOME/.ssh/authorized_keys
-fi
-
-chown -R $USER_NAME:$USER_NAME $PATH_HOME/.ssh
-chmod 644 $PATH_HOME/.ssh/authorized_keys
-chmod 600 $PATH_HOME/.ssh/id_rsa
-chmod 644 $PATH_HOME/.ssh/id_rsa.pub
 
 ##
 ## Open the necessory firewall ports
 ##
-if [ -e /usr/bin/open-port ];then
+which open-port 
+if [ $? -eq 0 ];then
    open-port 8010/TCP
    open-port 18010/TCP
    open-port 18002/TCP
    open-port 18008/TCP
-   open-port 7070/TCP
+   #open-port 7070/TCP
    open-port 8002/TCP
    open-port 8008/TCP
-   open-port 9876/TCP
-   open-port 8877/TCP
+   #open-port 9876/TCP
+   #open-port 8877/TCP
+   open-port 8015/TCP
 fi
 
 ##
