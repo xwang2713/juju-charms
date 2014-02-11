@@ -147,15 +147,12 @@ set -x
 which open-port 
 if [ $? -eq 0 ];then
    open-port 8010/TCP
-   open-port 18010/TCP
-   open-port 18002/TCP
-   open-port 18008/TCP
-   #open-port 7070/TCP
    open-port 8002/TCP
-   open-port 8008/TCP
-   #open-port 9876/TCP
-   #open-port 8877/TCP
    open-port 8015/TCP
+   open-port 9876/TCP
+   #open-port 18010/TCP
+   #open-port 18002/TCP
+   #open-port 18008/TCP
 fi
 
 ##
