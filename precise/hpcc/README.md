@@ -6,13 +6,16 @@ The HPCC Systems architecture incorporates a data query engine (called Thor) and
 
 An HPCC environment can include only Thor clusters, or both Thor and Roxie clusters. The HPCC Juju charm creates a cluster which contains both, but you can customize it after deployment.
 
-See [How it Works](http://www.hpccsystems.com/Why-HPCC/How-it-works)  for more details.
+See [How it Works](http://www.hpccsystems.com/Why-HPCC/How-it-works)  for more details. 
+
+See [System Requirements](http://hpccsystems.com/download/docs/system-requirements) for  hardware details. 
 
 The HPCC Juju Charm encapsulates best practice configurations for the HPCC  Systems Platform.  You can use a Juju Charm to stand up an HPCC Platform on:
 
 - Local Provider (LXC)
 
 - Amazon Web Services Cloud
+
 
 # Usage
 
@@ -54,12 +57,6 @@ For example, **nnn.nnn.nnn.nnn:8010**.
 If you have multiple nodes, the ECL Watch node will be the lowest IP address (first hpcc node listed).
 
 
-## AWS Cloud
-
-When deploying to Amazon Web Services Cloud, you must open these ports for external access:
-
-- Port **8010** for ECLWatch access
-- Port **8002** for WsECL access.
 
 # Configuration
 
@@ -73,12 +70,27 @@ If you want to configure manually, set **auto-gen** to **0**, wait for all nodes
 Another useful script reports the URL for the ECL Watch node. Call the **get-url.sh** script to display the cluster configuration and the URL for the ECL Watch service.
 
 ### ssh-keys ###
-Currently the hpcc charm uses a pre-generated ssh-key pair to configure nodes. 
+The hpcc charm automatically generates a key pair  (*id\_rsa*  &  *id\_rsa.pub*) to configure nodes. 
 
-If you have security concerns, you can generate new key pair, *id_rsa* and *id_rsa.pub* (using ssh-keygen) and then copy and paste into the two variables (*ssh-key-public* and *ssh-key-private*) in the configuration file (config.yaml) or in the Juju canvas configuration settings.  
+If you already have your own key pair and wish to use it, copy and paste their contents into the two variables (*ssh-key-public* and *ssh-key-private*) in the configuration file (config.yaml) or in the Juju canvas configuration settings.  
 
+### Verifying the checksum
+The charm uses an md5sum to verify the checksum of the HPCC platform  package before installing.  
 
-### Nest Steps ###
+For this version of the charm, it is set to check the md5sum for the Community Edition Version 4.2.0-4 for Ubuntu 12.04. To verify a different version, edition, or OS version, change the value of the md5sum in the package-checksum variable in config.yaml. 
+
+ 
+
+### AWS Cloud
+
+When deploying to Amazon Web Services Cloud, the charm automatically opens for external access, the following ports:
+
+- Port **8010** for ECLWatch access
+- Port **8002** for WsECL access.
+- Port **9876** for direct Roxie access
+- Port **8015** for Configuration Manager access.  
+
+### Next Steps ###
 
 After deploying and adding nodes, you can tweak various options to optimize your HPCC deployment to meet your needs.
  

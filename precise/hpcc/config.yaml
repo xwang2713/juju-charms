@@ -7,7 +7,7 @@ options:
 
   hpcc-version:
     type: string
-    default: 4.2.0-4
+    default: 5.0.0-rc3
     description: HPCC package version
 
   hpcc-type:
@@ -17,7 +17,7 @@ options:
 
   package-checksum:
     type: string
-    default: bc2fb0ad5f9fa1eaf7a33483ec31bfa3
+    default: 6ce4d13114e005aa1bbfcef611b5cbe7
     description: |
       HPCC package checksum. The default the value is for HPCC CE 4.2.0-4 Ubunut
       12.04 amd64. User can get other package checksum from:
@@ -26,7 +26,15 @@ options:
       allow automatically verification without this setting.
       Set this value to empty string to skip the validation when download the
       package.
-
+   
+  start-check-timeout:
+    type: int
+    default: 30
+    description: |
+      Start staus check timeout in seconds. After starting HPCC cluster each node
+      will check its components status every second till every component running.
+      If exceed timeout and some compoenents still haven't completedly started 
+      the start will be marked as "failed".
 
   download-url:
     type: string
@@ -52,7 +60,7 @@ options:
 # Control when to run envgen
   auto-gen:
     type: int
-    default: 1
+    default: 1 
     description: |
       0: will not generate HPCC cluster configuration in relation-changed hook.
          User need manually run bin/config_hpcc.sh script to do it.

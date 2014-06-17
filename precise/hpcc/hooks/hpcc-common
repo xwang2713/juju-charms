@@ -9,6 +9,27 @@ IP_FILE=${JUJU_HPCC_DIR}/ip_file.txt
 ECLWATCH_URL_FILE=${JUJU_HPCC_DIR}/eclwatch_url.txt
 
 ##
+## Fix private key in chance newlines removed
+##
+function fix_private_key()
+{
+   head_end_marks=$(echo "${PRI_KEY}" | \
+       sed -n "s/\(-----.*-----\).*\(-----.*-----\)/\1,\2/p" )
+
+   [ -z "$head_end_marks" ] && return
+
+   BEGIN_KEY=$(echo ${head_end_marks} | cut -d',' -f1)
+   END_KEY=$(echo ${head_end_marks} | cut -d',' -f2)
+
+   private_key=$(echo "${PRI_KEY}" | \
+       sed "s/${BEGIN_KEY}\(.*\)${END_KEY}/\1/g" | sed 's/ /\n/g')
+
+   END_KEY=$(echo "${END_KEY}"  | sed 's/^/\n/g')
+   PRI_KEY="${BEGIN_KEY}${private_key}${END_KEY}"
+
+}
+
+##
 ## Parse environment.conf
 ##
 function parse_env_config()
@@ -29,7 +50,7 @@ function parse_env_config()
 ##
 function set_ssh_keys()
 {
-  [ -z "$PUB_KEY" ] || [ -z "$PRI_KEY" ] && return
+  [ -z "$PUB_KEY" ] || [ -z "$PRI_KEY" ] && return 0
 
   parse_env_config
   juju-log "Set SSH Keys. HOME: $PATH_HOME, USER: $USER_NAME."
@@ -75,8 +96,11 @@ function create_and_set_ssh_keys()
     rm -rf ${SSH_DIR}
   fi
   set_ssh_keys
-  relation-set ssh-key-public="${PUB_KEY}"
-  relation-set ssh-key-private="${PRI_KEY}"
+  if [ -n "${JUJU_RELATION_ID}" ]
+  then
+     relation-set ssh-key-public="${PUB_KEY}"
+     relation-set ssh-key-private="${PRI_KEY}"
+  fi
 }
 
 ##
@@ -119,17 +143,22 @@ function configure_cluster()
   fi
 
   juju-log "Stop HPCC"
-  service hpcc-init stop
+  # Following command return 3 even stop succeeds
+  # It will be fixed in HPCC 5.0 release
+  service hpcc-init stop || :
 
   juju-log "Run envgen ${ENV_GEN} -env ${CONFIG_DIR}/${ENV_XML_FILE} -ipfile ${IP_FILE} -thornodes ${thor_nodes} -slavesPerNode ${slaves_per_node} -roxienodes ${roxie_nodes} -supportnodes ${support_nodes}"
   "${ENV_GEN}" -env "${CONFIG_DIR}/${ENV_XML_FILE}" -ipfile "${IP_FILE}" -thornodes "${thor_nodes}" -slavesPerNode "${slaves_per_node}" -roxienodes "${roxie_nodes}" -supportnodes "${support_nodes}"
   [ $? -ne 0 ] && exit 1
 
   juju-log "Start HPCC"
-  service hpcc-init start
+  start_and_check
+  rc=$?
 
   save_evngen_signature
   save_eclwatch_url
+
+  return $rc
 }
 
 ##
@@ -152,8 +181,7 @@ function save_eclwatch_url()
   juju-log "Update Check ECLWatch URL"
 
   first_node=$(head -n 1 $IP_FILE | cut -d';' -f1)
-  cat ${CONFIG_DIR}/${ENV_XML_FILE} | grep -q $first_node
-  [ $? -ne 0 ] && exit
+  cat ${CONFIG_DIR}/${ENV_XML_FILE} | grep -q $first_node || exit 0
 
   eclwatch_port=$(cat ${CONFIG_DIR}/${ENV_XML_FILE} | \
   sed -n '
@@ -172,4 +200,42 @@ function save_eclwatch_url()
   juju-log "set eclwatch-url http://${eclwatch_ip}:${eclwatch_port}"
 
   echo "http://${eclwatch_ip}:${eclwatch_port}" > ${ECLWATCH_URL_FILE}
+}
+
+##
+## Check HPCC Status
+##
+function check_hpcc_status()
+{
+  stopped_components=$(service hpcc-init status | grep "stopped" | awk '{ print $1 }')
+  [ -z "$stopped_components" ] && return 0
+  return 1
+}
+
+##
+## Start HPCC and check its status
+##
+function start_and_check()
+{
+
+  juju-log "Starting HPCC ..."
+  service hpcc-init start
+  start_check_timeout=$(config-get start-check-timeout)
+  if [ ${start_check_timeout} -gt 0 ]
+  then 
+     _end_time=$(expr $(date +"%s") \+ ${start_check_timeout})
+     while [ $(date +"%s")  -le $_end_time  ] 
+     do
+         sleep 1
+         check_hpcc_status && return 0
+     done
+  fi
+
+  check_hpcc_status 
+  if [ $? -ne 0 ]
+  then
+     juju-log "Failed to start HPCC processes. Check each log directory under /var/log/HPCCSysgtems for detail: ${stopped_components}."
+     return 1
+  fi
+  
 }

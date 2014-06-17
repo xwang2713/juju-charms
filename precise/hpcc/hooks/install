@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/bash -e
 
 ##
 ## Set debugging
@@ -17,12 +17,7 @@ CWD=$(dirname $0)
 ##
 ## Detect Linux Distro
 ##
-uname -a  | grep -q "x86_64"
-if [ $? -ne 0 ]
-then
-  juju-log "Only arch x86_64 is supported."
-  exit 1
-fi
+uname -a  | grep -q "x86_64" || ( juju-log "Only arch x86_64 is supported."; exit 1)
 
 
 Distributor_ID=$(lsb_release -a | grep  "Distributor ID:" | \
@@ -59,13 +54,13 @@ juju-log "OS release version:  $os_id"
 ##
 ## HPCC prerequisites
 ##
-dependence_dir=${CWD}/../dependences
-if [ ! -e ${dependence_dir}/${os_id} ]
+dependencies_dir=${CWD}/../dependencies
+if [ ! -e ${dependencies_dir}/${os_id} ]
 then
    juju-log "Prequisites for $os_id hasn't been implemented yet."
    exit 1
 fi
-${dependence_dir}/${os_id}  || exit 1
+${dependencies_dir}/${os_id}  || exit 1
 
 
 ##
@@ -112,6 +107,9 @@ then
       juju-log "Package checksum don't match. Expected ${expected_checksum} but get ${downloaded_checksum}" 
       exit 1
    fi
+else
+  juju-log "Missing package-checksum in config.yaml. You must validate checksum before installing the HPCC package. The checksum can be retrieved from http://hpccsystems.com/download/free-community-edition/server-platform for HPCC Community Server Platform." 
+  exit 1
    
 fi
 
@@ -138,13 +136,14 @@ rm -fr $PATH_HOME/.ssh/*
 set +x
 PUB_KEY=$(config-get ssh-key-public)
 PRI_KEY=$(config-get ssh-key-private)
+fix_private_key
 set_ssh_keys
 set -x
 
 ##
 ## Open the necessory firewall ports
 ##
-which open-port 
+which open-port  && \
 if [ $? -eq 0 ];then
    open-port 8010/TCP
    open-port 8002/TCP

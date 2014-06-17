@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash -e
 # This must be renamed to the name of the relation. The goal here is to
 # affect any change needed by the remote unit leaving the relationship.
 # This script should be idempotent.
@@ -6,13 +6,12 @@ juju-log $JUJU_REMOTE_UNIT departed
 
 
 JUJU_HPCC_DIR=/var/lib/HPCCSystems/charm
-${JUJU_HPCC_DIR}
 TMP_FILE=${JUJU_HPCC_DIR}/ip_file.tmp
 
 LOCAL_IP_FILE=${JUJU_HPCC_DIR}/local_ip.txt
 IP_FILE=${JUJU_HPCC_DIR}/ip_file.txt
 
-echo "$(head -n 1  $LOCAL_IP_FILE);" > ${TMP_FILE}
+[ -e ${LOCAL_IP_FILE} ] && echo "$(head -n 1  $LOCAL_IP_FILE);" > ${TMP_FILE}
 
 TOTAL_UNITS=1
 for UNIT in $(relation-list)
@@ -25,7 +24,7 @@ do
    fi
 done
 
-[  ${TOTAL_UNITS}  -eq 1 ] && exit
+[  ${TOTAL_UNITS}  -eq 1 ] && exit 0
 
 
 

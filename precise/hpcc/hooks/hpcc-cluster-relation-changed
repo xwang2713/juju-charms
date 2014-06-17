@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/bash -e
 # This must be renamed to the name of the relation. The goal here is to
 # affect any change needed by relationships being formed, modified, or broken
 # This script should be idempotent.
@@ -78,7 +78,7 @@ fi
 
 
 
-[  ${TOTAL_UNITS}  -eq 1 ] && exit
+[  ${TOTAL_UNITS}  -eq 1 ] && exit 0
 
 ##
 ## If auto-gen set to 0 we need manually trigger
@@ -86,13 +86,17 @@ fi
 ##
 auto_gen=$(config-get auto-gen)
 juju-log "auto_gen $auto_gen"
-[  ${auto_gen}  -eq 0 ] && exit
+[  ${auto_gen}  -eq 0 ] && exit 0
 
 
 if [ ${auto_gen} -eq 1 ]
 then
    configure_cluster ${TOTAL_UNITS}
+   rc=$?
 else
    get_envgen_configuration
    configure_cluster
+   rc=$?
 fi
+
+exit $rc
