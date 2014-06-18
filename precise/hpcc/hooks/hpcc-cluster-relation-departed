@@ -34,23 +34,16 @@ done
 ##
 cat $TMP_FILE | sort -n -t . -k 1,1 -k 2,2 -k 3,3 -k 4,4  > $IP_FILE
 
-##
-## DON'T HAVE A WAY TO CHECK IF CURRENT NODE IS LEAVING
-## IF IT IS FOLLOWING WILL FAIL.
-## For user need manually run  bin/config_hpcc.sh to reconfigure HPCC
-## after destroy a unit.
-##
+. ${CHARM_DIR}/hooks/hpcc-common
 
-#. ${CHARM_DIR}/hooks/hpcc-common
+auto_gen=$(config-get auto-gen)
+juju-log "auto_gen $auto_gen"
+[  ${auto_gen}  -eq 0 ] && exit
 
-#auto_gen=$(config-get auto-gen)
-#juju-log "auto_gen $auto_gen"
-#[  ${auto_gen}  -eq 0 ] && exit
-
-#if [ ${auto_gen} -eq 1 ]
-#then
-#   configure_cluster ${TOTAL_UNITS}
-#else
-#   get_envgen_configuration
-#   configure_cluster
-#fi
+if [ ${auto_gen} -eq 1 ]
+then
+   configure_cluster ${TOTAL_UNITS}
+else
+   get_envgen_configuration
+   configure_cluster
+fi
