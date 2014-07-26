@@ -9,10 +9,10 @@
 . ${CHARM_DIR}/hooks/hpcc-common
 
 parse_env_config
-if [ ! -e ${PATH_HOME}/.ssh/id_rsa ]
-then
-   create_and_set_ssh_keys
-fi
+#if [ ! -e ${PATH_HOME}/.ssh/id_rsa ]
+#then
+#   create_and_set_ssh_keys
+#fi
 
 start_and_check
 exit $?
