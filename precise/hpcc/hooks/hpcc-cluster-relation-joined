@@ -2,39 +2,21 @@
 # This must be renamed to the name of the relation. The goal here is to
 # affect any change needed by relationships being formed
 # This script should be idempotent.
-juju-log "$JUJU_REMOTE_UNIT joined relation id: $JUJU_RELATION_ID"
-#juju-log relation members:
-#relation-list
+juju-log $JUJU_REMOTE_UNIT joined
 
 . ${CHARM_DIR}/hooks/hpcc-common
-save_relation_id
 
-state=$(relation-get state $JUJU_UNIT_NAME)
-if [ ! -e "${LOCAL_IP_FILE}" ]
-then
-   juju-log "save local ip"
-   save_local_ip
-fi
+save_local_ip
 
-if [ -n "$state" ]
+relation-set name="${HOSTNAME}" netAddress="${IP_ADDRESS}"
+
+PUB_KEY=$(config-get ssh-key-public)
+PRI_KEY=$(config-get ssh-key-private)
+fix_private_key
+if [ -z "$PUB_KEY" ] || [ -z "$PUB_KEY" ]
 then
-   dali=$(relation-get dali $JUJU_UNIT_NAME)
-   juju-log "dali: $dali, current unit : $JUJU_UNIT_NAME"
-   if [ "$dali" = "$JUJU_UNIT_NAME" ]
-   then
-      relation-set "state=stop" "action=config" 
-   else
-      relation-set "state=idle" "action=config"
-      service hpcc-init stop || :
-   fi
+   relation-set reset-ssh-keys=1
+   create_and_set_ssh_keys
 else
-   relation-set "state=idle" "dali=" "action=config"
-   service hpcc-init stop || :
+   relation-set reset-ssh-keys=0
 fi
-juju-log "state:$(relation-get state) action:$(relation-get action)"
-
-
-#update_relation_ip_list $JUJU_REMOTE_UNIT
-update_relation_ip_list
-
-

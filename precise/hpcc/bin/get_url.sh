@@ -59,14 +59,15 @@ juju scp ${unit_name}:/var/lib/HPCCSystems/charm/${eclwatch_url_file} $LOCAL_URL
 if [ -e $LOCAL_URL_FILE ]
 then
    echo "ECLWatch URL: $(cat $LOCAL_URL_FILE)"
+   ECLWatch_IP=$(cat $LOCAL_URL_FILE | sed 's/.*\/\/\(.*\):.*/\1/')
    if [ $(juju switch) = amazon ]
    then
        cat << EOF
 
 Above displayed ip is instance private ip.  If ec2 client tool installed and
 configureed run following command to get the public ip:
-   ec2-describe-instances --filter private-ip-address=10.64.94.103 | \
-       head -n 2 | tail -n 1 | awk '{print $14}'
+   ec2-describe-instances --filter private-ip-address=${ECLWatch_IP} | \
+       head -n 2 | tail -n 1 | awk '{print \$13}'
 
 EOF
    fi

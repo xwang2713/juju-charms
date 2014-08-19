@@ -131,7 +131,7 @@ echo $PATH_HOME
 if [ ! -d $PATH_HOME/.ssh ]; then
         mkdir $PATH_HOME/.ssh
 fi
-#rm -fr $PATH_HOME/.ssh/*
+rm -fr $PATH_HOME/.ssh/*
 
 set +x
 PUB_KEY=$(config-get ssh-key-public)

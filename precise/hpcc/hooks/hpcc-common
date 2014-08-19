@@ -3,13 +3,10 @@ CONFIG_DIR=/etc/HPCCSystems
 ENV_XML_FILE=environment.xml
 ENV_CONF_FILE=environment.conf
 ENV_GEN="/opt/HPCCSystems/sbin/envgen"
-SIGNATURE_FILE=${JUJU_HPCC_DIR}/env_signature
-LOCAL_IP_FILE=${JUJU_HPCC_DIR}/local_ip
-UNIT_NAME_AND_IP_FILE=${JUJU_HPCC_DIR}/unit_name_and_ip_file
-IP_FILE=${JUJU_HPCC_DIR}/ip_file
-ECLWATCH_URL_FILE=${JUJU_HPCC_DIR}/eclwatch_url
-HPCC_STATE=${JUJU_HPCC_DIR}/juju_state
-HPCC_RELATION_ID=${JUJU_HPCC_DIR}/hpcc_relation_id
+SIGNATURE_FILE=${JUJU_HPCC_DIR}/env_signature.txt
+LOCAL_IP_FILE=${JUJU_HPCC_DIR}/local_ip.txt
+IP_FILE=${JUJU_HPCC_DIR}/ip_file.txt
+ECLWATCH_URL_FILE=${JUJU_HPCC_DIR}/eclwatch_url.txt
 
 ##
 ## Fix private key in chance newlines removed
@@ -19,10 +16,7 @@ function fix_private_key()
    head_end_marks=$(echo "${PRI_KEY}" | \
        sed -n "s/\(-----.*-----\).*\(-----.*-----\)/\1,\2/p" )
 
-   if [ -z "$head_end_marks" ] 
-   then
-       return
-   fi
+   [ -z "$head_end_marks" ] && return
 
    BEGIN_KEY=$(echo ${head_end_marks} | cut -d',' -f1)
    END_KEY=$(echo ${head_end_marks} | cut -d',' -f2)
@@ -56,10 +50,7 @@ function parse_env_config()
 ##
 function set_ssh_keys()
 {
-  if [ -z "$PUB_KEY" ] || [ -z "$PRI_KEY" ] 
-  then 
-     return 0
-  fi
+  [ -z "$PUB_KEY" ] || [ -z "$PRI_KEY" ] && return 0
 
   parse_env_config
   juju-log "Set SSH Keys. HOME: $PATH_HOME, USER: $USER_NAME."
@@ -121,8 +112,6 @@ function save_local_ip()
   HOSTNAME=$(unit-get public-address)
   PRIVATE_HOSTNAME=$(unit-get private-address)
   IP_ADDRESS=$(dig +short ${PRIVATE_HOSTNAME} | tail -n 1)
-  juju_relation_id=$(cat ${HPCC_RELATION_ID})
-  #relation-set -r $juju_relation_id "netAddress=${IP_ADDRESS}"
   echo "$IP_ADDRESS" > $LOCAL_IP_FILE
 }
 
@@ -139,49 +128,38 @@ function get_envgen_configuration()
 
 
 ##
-##
+## Generate environemt.xml
 ##
 function configure_cluster()
 {
 
-  number_of_nodes=$(cat $IP_FILE  | wc -l)
-  if [ -z "$number_of_nodes" ] 
-  then 
-     return
-  fi
+  number_of_nodes=$1
 
-  support_nodes=$(config-get supportnodes)
-  compute_nodes=$(expr $number_of_nodes \- $support_nodes)
-  if [ $compute_nodes -gt 0 ]
+  if [ -n "$number_of_nodes" ]
   then
-     thor_ratio=$(config-get thor-ratio)
-     roxie_ratio=$(config-get roxie-ratio)
-     juju-log "thor_ratio: $thor_ratio, roxie_ratio: $roxie_ratio"
-     thor_nodes=$(echo "scale=0; ($compute_nodes * ${thor_ratio})/1" | bc)
-     roxie_nodes=$(echo "scale=0; ($compute_nodes * ${roxie_ratio})/1" | bc)
-
-     #thor_nodes=$(config-get thornodes)
-     #roxie_nodes=$(config-get roxienodes)
-  else
-     thor_nodes=0
-     roxie_nodes=0
+     support_nodes=1
+     thor_nodes=$(expr $number_of_nodes \- 1)
+     roxie_nodes=$(expr $number_of_nodes \- 1)
+     slaves_per_node=1
   fi
-  juju-log "thornodes: $thor_nodes, roxienodes: $roxie_nodes"
-  slaves_per_node=$(config-get slavesPerNode)
 
-  #juju-log "Stop HPCC"
+  juju-log "Stop HPCC"
   # Following command return 3 even stop succeeds
   # It will be fixed in HPCC 5.0 release
-  service hpcc-init stop > /dev/null 2>&1 || :
+  service hpcc-init stop || :
 
   juju-log "Run envgen ${ENV_GEN} -env ${CONFIG_DIR}/${ENV_XML_FILE} -ipfile ${IP_FILE} -thornodes ${thor_nodes} -slavesPerNode ${slaves_per_node} -roxienodes ${roxie_nodes} -supportnodes ${support_nodes}"
   "${ENV_GEN}" -env "${CONFIG_DIR}/${ENV_XML_FILE}" -ipfile "${IP_FILE}" -thornodes "${thor_nodes}" -slavesPerNode "${slaves_per_node}" -roxienodes "${roxie_nodes}" -supportnodes "${support_nodes}"
   [ $? -ne 0 ] && exit 1
 
+  juju-log "Start HPCC"
+  start_and_check
+  rc=$?
 
   save_evngen_signature
-  #save_eclwatch_url
+  save_eclwatch_url
 
+  return $rc
 }
 
 ##
@@ -242,116 +220,11 @@ function check_hpcc_status()
 function start_and_check()
 {
 
+  juju-log "Starting HPCC ..."
   service hpcc-init start
   #start_check_delay=$(config-get start-check-delay)
   #[ ${start_check_delay} -gt 0 ] && sleep ${start_check_delay}
 
   #check_hpcc_status || return $?
   
-}
-
-##
-## Save relation id 
-##
-function save_relation_id()
-{
-   relation_id=$JUJU_RELATION_ID
-   if [ ! -e $HPCC_RELATION_ID ]
-   then
-      echo $relation_id > $HPCC_RELATION_ID
-   fi
-}
-
-##
-## Update relation list ip file 
-##
-function update_relation_ip_list()
-{
-
-   juju-log "Update relation ip list"  
-
-   if [ ! -e "${HPCC_RELATION_ID}" ] 
-   then 
-      return
-   fi
-
-   #just_jointed=$1
-
-   juju_relation_id=$(cat ${HPCC_RELATION_ID})
-
-   #UNIT_NAME_AND_IP_FILE=${JUJU_HPCC_DIR}/ip_file.tmp
-   LOCAL_IP=$(head -n 1  $LOCAL_IP_FILE)
-   echo "$JUJU_UNIT_NAME/${LOCAL_IP};" > ${UNIT_NAME_AND_IP_FILE}
-
-   juju-log "RESET_SSH_KEYS: $RESET_SSH_KEYS"
-
-   TOTAL_UNITS=1
-   for UNIT in $(relation-list -r ${juju_relation_id})
-   do
-      #if [ "$just_jointed" = "$UNIT" ]
-      #then
-          PRIVATE_HOSTNAME=$(relation-get  private-address $UNIT)
-          UNIT_ADDRESS=$(dig +short ${PRIVATE_HOSTNAME} | tail -n 1)
-      #else
-      #   UNIT_ADDRESS=$(relation-get -r $juju_relation_id netAddress $UNIT)
-      #fi
-      if [ -n "${UNIT_ADDRESS}" ]
-      then
-         TOTAL_UNITS=$(expr ${TOTAL_UNITS} \+ 1)
-         echo "${UNIT}/${UNIT_ADDRESS};" >> "${UNIT_NAME_AND_IP_FILE}"
-      fi
-    done
-
-
-    echo "File $UNIT_NAME_AND_IP_FILE " 
-    cat $UNIT_NAME_AND_IP_FILE  
-    cat $UNIT_NAME_AND_IP_FILE  | sort -n -t '/' -k 2,2 | cut -d '/' -f 3 > $IP_FILE
-    echo "File $IP_FILE " 
-    cat $IP_FILE  
-
-    
-    dali_ip=$(head -n 1 $IP_FILE) 
-    new_dali=$(cat $UNIT_NAME_AND_IP_FILE | grep $dali_ip | cut -d '/' -f -2)
-    cur_dali=$(relation-get -r $juju_relation_id dali $JUJU_UNIT_NAME)
-    juju-log "new dali: $new_dali, cur dali: $cur_dali, ip: $dali_ip"
-    [ "$new_dali" != "$cur_dali" ] && relation-set -r $juju_relation_id "dali=$new_dali"
-
-    #state=$(relation-get -r $juju_relation_id state $JUJU_UNIT_NAME)
-    #if [ "$JUJU_UNIT_NAME" = "$new_dali" ] && [ "$state" != "config" ]  
-    #then
-    #   relation-set -r $juju_relation_id "state=config"
-    #fi
-
-    return 0
-}
-
-##
-## check cluster states
-##   usage: check_cluster_states <states sperated by commo> <nagtive flag>
-##   if nagive flag present (any value) will test excluding the states
-##
-function check_cluster_states()
-{
-   juju-log "Check cluster for state "$1", nagtive flag: $2"  
-   states=$1
-   nagtive_flag=$2
-   juju_relation_id=$(cat ${HPCC_RELATION_ID})
-   for UNIT in $(relation-list -r ${juju_relation_id})
-   do
-      state=$(relation-get -r $juju_relation_id state $UNIT)
-      juju-log "checking state: $state"
-      matched_string=$(echo ",${states}," | grep -i ",${state}," || :)
-      juju-log "checking found string: $found_string"
-      if [ -z "$nagive_flag" ] && [ -z "${matched_string}" ]
-      then
-          CHECK_STATE_RC=1 
-      elif [ -n "$nagive_flag" ] && [ -n "${matched_string}" ]
-      then
-          CHECK_STATE_RC=1 
-      else
-          CHECK_STATE_RC=0
-      fi
-   done
-   juju-log "Leaving check_cluster_states"  
-
 }

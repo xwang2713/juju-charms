@@ -7,7 +7,7 @@ options:
 
   hpcc-version:
     type: string
-    default: 5.0.0-2
+    default: 5.0.0-3
     description: HPCC package version
 
   hpcc-type:
@@ -17,9 +17,9 @@ options:
 
   package-checksum:
     type: string
-    default: 4f612600dd0e69a0fbcec9033e925f22
+    default: a1a1b06886e9229cb2d01bdf8c9945e4 
     description: |
-      HPCC package checksum. The default the value is for HPCC CE 5.0.0-2 Ubuntu
+      HPCC package checksum. The default the value is for HPCC CE 5.0.0-3 Ubuntu
       12.04 amd64. User can get other package checksum from:
            http://hpccsystems.com/download
       In future HPCCSystem download site will provide checksum file which will
@@ -109,13 +109,3 @@ options:
     type: int
     default: 0
     description: Number of thor slaves per node.
-
-  roxie-ratio:
-    type: float
-    default: 1.0
-    description: roixe nodes ratio for maximum available roxie nodes. Only used when auto-gen=1
-
-  thor-ratio:
-    type: float
-    default: 1.0
-    description: thor nodes ratio for maximum available thor nodes. Only used when auto-gen=1
