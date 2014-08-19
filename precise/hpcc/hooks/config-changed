@@ -3,7 +3,39 @@
 
 . ${CHARM_DIR}/hooks/hpcc-common
 
-update_relation_ip_list
+if [ ! -e ${JUJU_CONFIG_FILE} ]
+then
+   config-get --all > ${JUJU_CONFIG_FILE}
+   config_changed=
+else
+   config-get --all > /tmp/juju_config
+   config_changed=$(diff -q  ${JUJU_CONFIG_FILE} /tmp/juju_config || :)
+   reset_cluster=True
+   if [ -n "$config_changed" ]
+   then
+       new_reset_counter=$(config-get reset_counter) 
+       old_reset_counter=$(cat ${JUJU_CONFIG_FILE} | \
+           grep "reset_counter=" | cut -d '=' -f2 ) 
+       if [ $new_reset_counter -le $old_reset_counter ]
+       then
+          reset_cluster=False
+       fi 
+   fi
+
+   if [ "$reset_cluster" = "True" ]
+   then
+      #update_relation_ip_list
+      #wait_reset_private_address
+      juju_relation_id=$(cat ${HPCC_RELATION_ID})
+      dali=$(relation-get -r $juju_relation_id dali $JUJU_UNIT_NAME)
+      if [ "$dali" = "$JUJU_UNIT_NAME" ]
+      then
+         relation-set -r $juju_relation_id "state=reset" "action=ip"
+      fi
+      #config-get --all > ${JUJU_CONFIG_FILE}
+   fi
+fi
+
 
 #juju_relation_id=$(cat ${HPCC_RELATION_ID})
 #dali=$(relation-get -r $juju_relation_id dali)

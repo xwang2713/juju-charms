@@ -37,7 +37,8 @@ then
   juju-log "dali action: $action"
   case "$state" in
         stop)
-           check_cluster_states stop,idle
+           #check_cluster_states stop,idle
+           check_cluster_states idle
            if [ ${CHECK_STATE_RC} -eq 0 ] 
            then
               service hpcc-init stop || :
@@ -45,11 +46,10 @@ then
            fi
            ;;
         config)
-           configure_cluster
-           relation-set state=ready
            check_cluster_states "ready"
            if [ ${CHECK_STATE_RC} -eq 0 ]
            then
+              configure_cluster
               start_and_check
               relation-set state=start
            fi
@@ -64,7 +64,31 @@ then
            ;;
         start)
            check_cluster_states "running"
-           [ ${CHECK_STATE_RC} -eq 0 ]  && relation-set state=running
+           if [ ${CHECK_STATE_RC} -eq 0 ]  
+           then  
+              relation-set state=running
+           fi
+           ;;
+        reset)
+           check_private_address
+           ;;
+        reset-done)
+           check_cluster_states "reset-done"
+           if [ ${CHECK_STATE_RC} -eq 0 ]  
+           then  
+              relation-set state="$action" action="config"
+           else
+              sleep 1
+              relation-set timestamp=$(date +%s)
+           fi
+           ;;
+        ip)
+           check_cluster_states "ip"
+           if [ ${CHECK_STATE_RC} -eq 0 ]  
+           then  
+              update_relation_ip_list
+              relation-set state=stop
+           fi
            ;;
         idle)
            relation-set state="$action"
@@ -94,6 +118,37 @@ else
            relation-set "state=ready"
         fi
         ;;
+     reset | reset-done)
+        if [ "$state" != "reset-done" ] 
+        then
+           if [ "$state" != "reset" ] 
+           then
+              relation-set state="reset" timestamp="$(date +%s)"
+           fi
+           check_private_address
+        else
+           # In chance only dali hasn't finish reset following will keep
+           # notify dali node to retry check_private_address
+           dali_ip=$(cat $UNIT_NAME_AND_IP_FILE | grep $dali | cut -d '/' -f 3)
+           last_ip_exlude_dali=$(cat $IP_FILE | grep -v $dali_ip | tail -n 1)
+           last_unit=$(cat $UNIT_NAME_AND_IP_FILE | \
+              grep $last_ip_exclude_dali |  cut -d '/' -f -2)
+           echo "last_unit: $last_unit  Current unit: $JUJU_UNIT_NAME"
+           if [ "$last_unit" = "$JUJU_UNIT_NAME" ]
+           then
+              sleep 1
+              echo "update timestamp for dail"
+              relation-set timestamp="$(date +%s)"
+           fi
+        fi
+        ;;
+      ip)
+        if [ "$state" != "ip" ] 
+        then
+           update_relation_ip_list
+           relation-set state=ip
+         fi
+         ;;
   esac
 fi
 

@@ -10,6 +10,7 @@ IP_FILE=${JUJU_HPCC_DIR}/ip_file
 ECLWATCH_URL_FILE=${JUJU_HPCC_DIR}/eclwatch_url
 HPCC_STATE=${JUJU_HPCC_DIR}/juju_state
 HPCC_RELATION_ID=${JUJU_HPCC_DIR}/hpcc_relation_id
+JUJU_CONFIG_FILE=${JUJU_HPCC_DIR}/juju_config
 
 ##
 ## Fix private key in chance newlines removed
@@ -114,6 +115,43 @@ function create_and_set_ssh_keys()
 }
 
 ##
+## check  unit private-address
+## After reboot ip is changed but unit-get private-address
+## need take some time to reset correct ip.
+## This function will check if the "unit-get private-address" 
+## gives correct ip or not.
+##
+function check_private_address()
+{
+   echo "enter wait reset private address"
+   _rc=1
+   _PRIVATE_HOSTNAME=$(unit-get private-address)
+   _IP_ADDRESS=$(dig +short ${_PRIVATE_HOSTNAME} | tail -n 1)
+   juju_relation_id=$(cat ${HPCC_RELATION_ID})
+   PRIVATE_HOSTNAME=$(relation-get -r ${juju_relation_id} private-address $JUJU_UNIT_NAME)
+   UNIT_ADDRESS=$(dig +short ${PRIVATE_HOSTNAME} | tail -n 1)
+   echo "private-address from unit-get: $_IP_ADDRESS"
+   echo "private-address from relation-get: $UNIT_ADDRESS"
+   echo "ifconfig: $(ifconfig -a | grep -i "inet addr:${_IP_ADDRESS}" || :)"
+   _result=$(ifconfig -a | grep -i "inet addr:${_IP_ADDRESS}" || :)
+   
+   if [ -n "$_result" ] && [ "$UNIT_ADDRESS" = "$_IP_ADDRESS" ]
+   then
+      echo "set reset-done   result=${_result}"
+      relation-set state="reset-done" 
+      #private-address="${_PRIVATE_HOSTNAME}"
+   else   
+      if [ -n "$_result" ] && [ "$UNIT_ADDRESS" != "$_IP_ADDRESS" ]
+      then
+         relation-set private-address="${_PRIVATE_HOSTNAME}"
+      fi
+      sleep 1
+      relation-set timestamp=$(date +%s)
+   fi
+   echo "leave wait reset private address: $_IP_ADDRESS"
+}
+
+##
 ## Save local ip to a file
 ##
 function save_local_ip()
@@ -122,7 +160,7 @@ function save_local_ip()
   PRIVATE_HOSTNAME=$(unit-get private-address)
   IP_ADDRESS=$(dig +short ${PRIVATE_HOSTNAME} | tail -n 1)
   juju_relation_id=$(cat ${HPCC_RELATION_ID})
-  #relation-set -r $juju_relation_id "netAddress=${IP_ADDRESS}"
+  #relation-set  "netAddress=${IP_ADDRESS}"
   echo "$IP_ADDRESS" > $LOCAL_IP_FILE
 }
 
@@ -280,7 +318,10 @@ function update_relation_ip_list()
    juju_relation_id=$(cat ${HPCC_RELATION_ID})
 
    #UNIT_NAME_AND_IP_FILE=${JUJU_HPCC_DIR}/ip_file.tmp
-   LOCAL_IP=$(head -n 1  $LOCAL_IP_FILE)
+   #LOCAL_IP=$(head -n 1  $LOCAL_IP_FILE)
+   PRIVATE_HOSTNAME=$(unit-get private-address)
+   LOCAL_IP=$(dig +short ${PRIVATE_HOSTNAME} | tail -n 1)
+
    echo "$JUJU_UNIT_NAME/${LOCAL_IP};" > ${UNIT_NAME_AND_IP_FILE}
 
    juju-log "RESET_SSH_KEYS: $RESET_SSH_KEYS"
@@ -288,13 +329,8 @@ function update_relation_ip_list()
    TOTAL_UNITS=1
    for UNIT in $(relation-list -r ${juju_relation_id})
    do
-      #if [ "$just_jointed" = "$UNIT" ]
-      #then
-          PRIVATE_HOSTNAME=$(relation-get  private-address $UNIT)
-          UNIT_ADDRESS=$(dig +short ${PRIVATE_HOSTNAME} | tail -n 1)
-      #else
-      #   UNIT_ADDRESS=$(relation-get -r $juju_relation_id netAddress $UNIT)
-      #fi
+      PRIVATE_HOSTNAME=$(relation-get -r ${juju_relation_id} private-address $UNIT)
+      UNIT_ADDRESS=$(dig +short ${PRIVATE_HOSTNAME} | tail -n 1)
       if [ -n "${UNIT_ADDRESS}" ]
       then
          TOTAL_UNITS=$(expr ${TOTAL_UNITS} \+ 1)
@@ -314,7 +350,10 @@ function update_relation_ip_list()
     new_dali=$(cat $UNIT_NAME_AND_IP_FILE | grep $dali_ip | cut -d '/' -f -2)
     cur_dali=$(relation-get -r $juju_relation_id dali $JUJU_UNIT_NAME)
     juju-log "new dali: $new_dali, cur dali: $cur_dali, ip: $dali_ip"
-    [ "$new_dali" != "$cur_dali" ] && relation-set -r $juju_relation_id "dali=$new_dali"
+    if [ "$new_dali" != "$cur_dali" ] 
+    then
+        relation-set "dali=$new_dali"
+    fi
 
     #state=$(relation-get -r $juju_relation_id state $JUJU_UNIT_NAME)
     #if [ "$JUJU_UNIT_NAME" = "$new_dali" ] && [ "$state" != "config" ]  
@@ -336,20 +375,21 @@ function check_cluster_states()
    states=$1
    nagtive_flag=$2
    juju_relation_id=$(cat ${HPCC_RELATION_ID})
+   CHECK_STATE_RC=0
    for UNIT in $(relation-list -r ${juju_relation_id})
    do
       state=$(relation-get -r $juju_relation_id state $UNIT)
-      juju-log "checking state: $state"
+      juju-log "$UNIT is in state: $state"
       matched_string=$(echo ",${states}," | grep -i ",${state}," || :)
-      juju-log "checking found string: $found_string"
+      juju-log "checking found string: $matched_string"
       if [ -z "$nagive_flag" ] && [ -z "${matched_string}" ]
       then
           CHECK_STATE_RC=1 
+          break
       elif [ -n "$nagive_flag" ] && [ -n "${matched_string}" ]
       then
           CHECK_STATE_RC=1 
-      else
-          CHECK_STATE_RC=0
+          break
       fi
    done
    juju-log "Leaving check_cluster_states"  

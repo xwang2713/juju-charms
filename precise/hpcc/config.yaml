@@ -119,3 +119,10 @@ options:
     type: float
     default: 1.0
     description: thor nodes ratio for maximum available thor nodes. Only used when auto-gen=1
+
+  reset-counter:
+    type: int
+    default: 0
+    description: |
+      Increase this value to force system re-configure. It is useful when reboot instances
+      and ips changed.
