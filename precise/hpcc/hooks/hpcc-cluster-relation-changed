@@ -12,10 +12,9 @@ juju-log $JUJU_REMOTE_UNIT modified its settings
 #juju-log Relation members:
 #relation-list
 
-TMP_FILE=${JUJU_HPCC_DIR}/ip_file.tmp
 
 LOCAL_IP=$(head -n 1  $LOCAL_IP_FILE) 
-echo "${LOCAL_IP};,$JUJU_UNIT_NAME" > ${TMP_FILE}
+echo "${LOCAL_IP};,$JUJU_UNIT_NAME" > ${IP_UNIT_FILE}
 
 RESET_SSH_KEYS=$(relation-get reset-ssh-keys)
 
@@ -28,14 +27,14 @@ do
    if [ -n "${UNIT_ADDRESS}" ]
    then
       TOTAL_UNITS=$(expr ${TOTAL_UNITS} \+ 1)
-      echo "${UNIT_ADDRESS};,${UNIT}" >> "${TMP_FILE}"
+      echo "${UNIT_ADDRESS};,${UNIT}" >> "${IP_UNIT_FILE}"
    fi
 done
 
 ##
 ## Sort IPs
 ##
-cat $TMP_FILE | cut -d',' -f 1 | \
+cat $IP_UNIT_FILE | cut -d',' -f 1 | \
    sort -n -t . -k 1,1 -k 2,2 -k 3,3 -k 4,4  > $IP_FILE
 
 LOWEST_IP=$(head -n 1 $IP_FILE | cut -d ';' -f1)
@@ -55,7 +54,7 @@ then
         create_and_set_ssh_keys
      fi
   else
-     LOWEST_IP_UNIT=$(cat ${TMP_FILE} | grep "${LOWEST_IP}" | \
+     LOWEST_IP_UNIT=$(cat ${IP_UNIT_FILE} | grep "${LOWEST_IP}" | \
         cut -d',' -f 2)
      # Wait lowest ip host to set ssh keys
      wait_ssk_key_counter=10

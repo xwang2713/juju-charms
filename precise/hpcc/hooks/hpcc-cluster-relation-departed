@@ -11,12 +11,12 @@ then
 fi
 
 JUJU_HPCC_DIR=/var/lib/HPCCSystems/charm
-TMP_FILE=${JUJU_HPCC_DIR}/ip_file.tmp
+IP_UNIT_FILE=${JUJU_HPCC_DIR}/ip_unit_file.txt
 
 LOCAL_IP_FILE=${JUJU_HPCC_DIR}/local_ip.txt
 IP_FILE=${JUJU_HPCC_DIR}/ip_file.txt
 
-[ -e ${LOCAL_IP_FILE} ] && echo "$(head -n 1  $LOCAL_IP_FILE);" > ${TMP_FILE}
+[ -e ${LOCAL_IP_FILE} ] && echo "$(head -n 1  $LOCAL_IP_FILE);" > ${IP_UNIT_FILE}
 
 TOTAL_UNITS=1
 for UNIT in $(relation-list)
@@ -25,7 +25,7 @@ do
    if [ -n "${UNIT_ADDRESS}" ]
    then
       TOTAL_UNITS=$(expr ${TOTAL_UNITS} \+ 1)
-      echo "${UNIT_ADDRESS};" >> "${TMP_FILE}"
+      echo "${UNIT_ADDRESS};" >> "${IP_UNIT_FILE}"
    fi
 done
 
@@ -37,7 +37,7 @@ done
 ##
 ## Sort IPs
 ##
-cat $TMP_FILE | sort -n -t . -k 1,1 -k 2,2 -k 3,3 -k 4,4  > $IP_FILE
+cat $IP_UNIT_FILE | sort -n -t . -k 1,1 -k 2,2 -k 3,3 -k 4,4  > $IP_FILE
 
 
 . ${CHARM_DIR}/hooks/hpcc-common

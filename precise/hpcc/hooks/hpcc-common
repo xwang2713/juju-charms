@@ -7,6 +7,7 @@ SIGNATURE_FILE=${JUJU_HPCC_DIR}/env_signature.txt
 LOCAL_IP_FILE=${JUJU_HPCC_DIR}/local_ip.txt
 IP_FILE=${JUJU_HPCC_DIR}/ip_file.txt
 ECLWATCH_URL_FILE=${JUJU_HPCC_DIR}/eclwatch_url.txt
+IP_UNIT_FILE=${JUJU_HPCC_DIR}/ip_unit_file.txt
 
 ##
 ## Fix private key in chance newlines removed
@@ -198,9 +199,10 @@ function save_eclwatch_url()
     }
   ' |  cut -d '"' -f 2)
 
-  juju-log "set eclwatch-url http://${eclwatch_ip}:${eclwatch_port}"
+  unit=$(cat ${IP_UNIT_FILE} | grep ${eclwatch_ip} | cut -d ',' -f 2)
+  juju-log "set eclwatch unit:ip:port:  ${unit}:${eclwatch_ip}:${eclwatch_port}"
 
-  echo "http://${eclwatch_ip}:${eclwatch_port}" > ${ECLWATCH_URL_FILE}
+  echo "${unit}:${eclwatch_ip}:${eclwatch_port}" > ${ECLWATCH_URL_FILE}
 }
 
 ##

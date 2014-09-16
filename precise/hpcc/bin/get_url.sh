@@ -3,8 +3,6 @@
 
 function get_service_information()
 {
-
-
    service_info=$(python ${ABS_CWD}/parse_status.py)
    service_list=( $service_info )
    for item in "${service_list[@]}"
@@ -58,19 +56,17 @@ juju scp ${unit_name}:/var/lib/HPCCSystems/charm/${eclwatch_url_file} $LOCAL_URL
 
 if [ -e $LOCAL_URL_FILE ]
 then
-   echo "ECLWatch URL: $(cat $LOCAL_URL_FILE)"
-   ECLWatch_IP=$(cat $LOCAL_URL_FILE | sed 's/.*\/\/\(.*\):.*/\1/')
-   if [ $(juju switch) = amazon ]
-   then
-       cat << EOF
 
-Above displayed ip is instance private ip.  If ec2 client tool installed and
-configureed run following command to get the public ip:
-   ec2-describe-instances --filter private-ip-address=${ECLWatch_IP} | \
-       head -n 2 | tail -n 1 | awk '{print \$13}'
+   #echo "ECLWatch URL: $(cat $LOCAL_URL_FILE)"
+   UNIT=$(cat $LOCAL_URL_FILE | cut -d ':' -f 1)
+   PRIVATE_IP=$(cat $LOCAL_URL_FILE | cut -d ':' -f 2)
+   PORT=$(cat $LOCAL_URL_FILE | cut -d ':' -f 3)
 
-EOF
-   fi
+   public_address=$(python ${ABS_CWD}/parse_status.py \
+      -q public_address -s $service_name -u $UNIT)
+
+   echo  "http://${public_address}:${PORT}"
+
 else
    echo "Failed to get $eclwatch_url_file from unit ${unit_name}"
 fi

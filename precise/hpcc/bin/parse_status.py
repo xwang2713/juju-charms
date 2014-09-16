@@ -29,6 +29,7 @@ def LoadYamlObject():
 
 def GetServiceName():
    global service_name
+   global config
    global charm_name
 
    if (service_name != "" ):
@@ -42,6 +43,7 @@ def GetServiceName():
 
 def GetNumOfUnites():
    global service_name
+   global config
 
    if (service_name == ""):
       GetServiceName()
@@ -52,16 +54,28 @@ def GetNumOfUnites():
    number_of_units = len(config["services"][service_name]["units"].keys())
    print("unit_number=" + str(number_of_units))
 
-def ParseStatus():
-   global query_actions
-   global query_all
 
-   for action in query_all:
+def GetAttrFromUnit():
+   global service_name
+   global service_unit
+   global config
+
+   attr = config["services"][service_name]["units"][service_unit]['public-address']
+   print(attr)
+
+
+def ParseStatus():
+   global query_list
+   global service_name
+
+   for action in query_list:
        if (action == "service"):
            GetServiceName()
        elif (action == "num_of_units"):
            GetNumOfUnites()
-
+       else:
+           GetAttrFromUnit()
+           
 
 
 
@@ -81,17 +95,19 @@ if __name__ == "__main__":
    query_actions = ""
    query_list = []
    service_name = ""
+   service_unit = ""
    status_file_name = ""
 
    try:
-      opts, args = getopt.getopt(sys.argv[1:],":q:f:s:",
-           ["help", "query", "file", "service"])
+      opts, args = getopt.getopt(sys.argv[1:],":q:f:s:u:",
+           ["help", "query", "file", "service", "unit"])
 
    except getopt.GetoptError as err:
       print(str(err))
       Usage()
       exit()
 
+   
    for arg, value in opts:
       if arg in ("-?", "--help"):
          Usage()
@@ -102,6 +118,8 @@ if __name__ == "__main__":
          service_name = value
       elif arg in ("-f", "--file"):
          status_file_name = value
+      elif arg in ("-u", "--unit"):
+         service_unit = value
       else:
          print("\nUnknown option: " + arg)
          Usage()
