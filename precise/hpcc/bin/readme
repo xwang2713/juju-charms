@@ -1,0 +1,58 @@
+This directory has some help tools. All of them are optional. 
+Normal users can achieve the same results without these. 
+They are for internal use and backward compatiblity.
+
+1. check_status.sh
+
+   Usually juju status display a unit in "started" doesn't mean HPCC
+   cluster is configured and ready.  This tool check all HPCC components
+   are ready to use or not.
+
+   User can check these from ECLWatch web page. It tool is provided
+   to command-line process.
+
+   Sample output: 
+
+      CHARM NAME          : hpcc                
+      SERVICE NAME        : hpcc                
+      UNIT NUMBER         : 3                   
+      HPCC Version        : 5.0.0-3             
+      Nodes in cluster    : 3                   
+
+      All HPCC processes are running.
+      All thor slave nodes are ready.
+
+   "HPCC Version" will indicate expected HPCC package installed or not.
+   "Nodes in cluster" will tell if all unit joined in the cluster or not.
+   "All HPCC processes are running" means all HPCC configured processes 
+       are started.
+   "All thor slave nodes are ready" mean all thor slaves are ready to use.
+       If big data spread thor slaves will take a while to complete 
+       initialization. This checking will help to tell the slaves are fully
+       started and ready to use.
+
+2. config_hpcc.sh
+
+   Reconfigure HPCC cluster topology. 
+   User can use "juju set <hpcc service> roxie-ratio=<value> thor-ratio=<value>"
+   to achieve the same result. This tool just use 'roxie/thor node number' 
+   instead of 'ratio'.
+
+   Sample usage:
+   To show current configuration:
+       ./config_hpcc.sh -list
+   
+   To reconfigure HPCC cluster with different roxie/thor nodes:
+       ./config_hpcc.sh -roxienodes <new value> -thornodes <new value>
+
+3. get_url.sh
+  
+   Get ECLWatch URL.
+   Current implementation will alwasy use the first <hpcc service> unit as
+   ESP node. So the ECLWatch ip will the first <hpcc service> unit public
+   ip. The port will be 8010 unless re-configured with configure manager
+   which is for more advanced configuration. 
+
+4. parse_config.py/parse_status.py
+
+   These are help scripts for above tools.
