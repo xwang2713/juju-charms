@@ -9,6 +9,114 @@ IP_FILE=${JUJU_HPCC_DIR}/ip_file.txt
 ECLWATCH_URL_FILE=${JUJU_HPCC_DIR}/eclwatch_url.txt
 IP_UNIT_FILE=${JUJU_HPCC_DIR}/ip_unit_file.txt
 
+BASE_URL=http://cdn.hpccsystems.com/releases
+HPCC_TYPE=CE
+START_CHECK_DELAY=5
+
+
+##
+## Get OS information
+##
+function get_os_info()
+{
+  Distributor_ID=$(lsb_release -a | grep  "Distributor ID:" | \
+  sed -n "s/.*:[[:space:]]*\(.*\)/\1/p")
+  juju-log "Distriobutor_ID: $Distributor_ID"
+
+  if [ "$Distributor_ID" == "CentOS" ]
+  then
+    os_release=$(lsb_release -a | grep -e "Release:" | \
+    sed -n "s/.*:[[:space:]]*\(.*\)/\1/p")
+    if [ ${os_release:0:1} -eq 6 ]
+    then
+      os_id=el6
+    elif [ ${os_release:0:1} -eq 5 ]
+    then
+      os_id=el5
+    else
+      juju-log "Unsupported CenOS version: ${os_release}."
+      exit 1
+    fi
+
+  elif [ "$Distributor_ID" == "Ubuntu" ]
+  then
+    code_name=$(lsb_release -a | grep -e "Codename:" | \
+    sed -n "s/.*:[[:space:]]*\(.*\)/\1/p")
+    os_id=$code_name
+  else
+    juju-log "Unsupported Linux for Juju/charm HPCC: $Distributor_ID"
+    exit 1
+ fi
+
+}
+
+##
+## Download HPCC Platform
+##
+function download_hpcc_platform()
+{
+
+  base_url=${BASE_URL}
+  hpcc_version=$(config-get  hpcc-version)
+  hpcc_version_mmp=$(echo $hpcc_version | cut -d '-' -f1)
+  juju-log "hpcc_version_mmp: $hpcc_version_mmp"
+
+  declare -A type_detail
+  type_detail[CE]=community
+  type_detail[EE]=enterprise
+  type_detail[LN]=internal
+
+  package_name="hpccsystems-platform_${type_detail[$HPCC_TYPE]}-${hpcc_version}"
+  download_url="${base_url}/${HPCC_TYPE}-Candidate-${hpcc_version_mmp}"
+  download_url="${download_url}/bin/platform/$package_name"
+
+  if [ "$Distributor_ID" == "CentOS" ]
+  then
+    download_url="${download_url}.${os_id}_x86_64.rpm"
+    rm -rf ${package_name}*.rpm
+  else
+    download_url="${download_url}${os_id}_amd64.deb"
+    rm -rf ${package_name}*.deb
+  fi
+
+  juju-log "Download URL: $download_url"
+
+
+  curl -s -O $download_url
+  sleep 2
+
+}
+
+##
+## Install HPCC Platform
+##
+function install_hpcc_platform()
+{
+  hpcc_package=$(basename $download_url)
+
+  expected_checksum=$(config-get package-checksum)
+  if [ -n "$expected_checksum" ]
+  then
+    downloaded_checksum=$(md5sum ${hpcc_package} | cut -d ' ' -f1)
+    if [ "$expected_checksum" != "${downloaded_checksum}" ]
+    then
+      juju-log "Package checksum don't match. Expected ${expected_checksum} but get ${downloaded_checksum}"
+      exit 1
+    fi
+  else
+    juju-log "Missing package-checksum in config.yaml. You must validate checksum before installing the HPCC package. The checksum can be retrieved from http://hpccsystems.com/download/free-community-edition/server-platform for HPCC Community Server Platform."
+    exit 1
+
+  fi
+  if [ "$Distributor_ID" == "CentOS" ]
+  then
+    rpm -U --nodeps  $hpcc_package || exit 1
+  else
+    DEBIAN_FRONTEND=noninteractive dpkg -i $hpcc_package || exit 1
+  fi
+}
+
+
 ##
 ## Fix private key in chance newlines removed
 ##
@@ -51,7 +159,8 @@ function parse_env_config()
 ##
 function set_ssh_keys()
 {
-  [ -z "$PUB_KEY" ] || [ -z "$PRI_KEY" ] && return 0
+  [ -n "$PUB_KEY" ] || return 0
+  [ -n "$PRI_KEY" ] || return 0
 
   parse_env_config
   juju-log "Set SSH Keys. HOME: $PATH_HOME, USER: $USER_NAME."
@@ -59,7 +168,6 @@ function set_ssh_keys()
      mkdir $PATH_HOME/.ssh
   fi
   rm -fr $PATH_HOME/.ssh/*
-
 
   echo "$PUB_KEY" > $PATH_HOME/.ssh/id_rsa.pub
   echo "$PRI_KEY" > $PATH_HOME/.ssh/id_rsa
@@ -79,6 +187,9 @@ function set_ssh_keys()
 ##
 function create_and_set_ssh_keys()
 {
+  
+  set_ssh_flag=$1
+
   for UNIT in $(relation-list)
   do
     PUB_KEY=$(relation-get ssh-key-public ${UNIT})
@@ -97,12 +208,14 @@ function create_and_set_ssh_keys()
     rm -rf ${SSH_DIR}
   fi
   set_ssh_keys
-  if [ -n "${JUJU_RELATION_ID}" ]
+  if [ $set_ssh_flag -eq 1 ]
   then
      juju-log "Set ssh kyes."
      relation-set ssh-key-public="${PUB_KEY}"
      relation-set ssh-key-private="${PRI_KEY}"
   fi
+  
+  return 0
 }
 
 ##
@@ -121,12 +234,37 @@ function save_local_ip()
 ##
 function get_envgen_configuration()
 {
-  support_nodes=$(config-get supportnodes)
-  thor_nodes=$(config-get thornodes)
-  roxie_nodes=$(config-get roxienodes)
-  slaves_per_node=$(config-get slavesPerNode)
+  support_nodes=$(config-get support-nodes)
+  thor_ratio=$(config-get thor-ratio)
+  roxie_ratio=$(config-get roxie-ratio)
+  slaves_per_node=$(config-get slaves-per-node)
 }
 
+##
+## Generate environemt.xml
+##
+function calculate_nodes()
+{
+
+  number_of_nodes=$1
+
+  support_nodes=$(config-get support-nodes)
+  slaves_per_node=$(config-get slaves-per-node)
+  compute_nodes=$(expr $number_of_nodes \- $support_nodes)
+  if [ $compute_nodes -gt 0 ]
+  then
+     thor_ratio=$(config-get thor-ratio)
+     roxie_ratio=$(config-get roxie-ratio)
+     juju-log "thor_ratio: $thor_ratio, roxie_ratio: $roxie_ratio"
+     thor_nodes=$(echo "scale=0; (($compute_nodes * ${thor_ratio}) / ${slaves_per_node})/1" | bc)
+     roxie_nodes=$(echo "scale=0; ($compute_nodes * ${roxie_ratio})/1" | bc)
+  else
+     thor_nodes=0
+     roxie_nodes=0
+  fi
+  juju-log "thornodes: $thor_nodes, roxienodes: $roxie_nodes"
+
+}
 
 ##
 ## Generate environemt.xml
@@ -134,33 +272,28 @@ function get_envgen_configuration()
 function configure_cluster()
 {
 
-  number_of_nodes=$1
+  [  -e $IP_FILE ] || return 0
 
-  if [ -n "$number_of_nodes" ]
+  number_of_nodes=$(cat $IP_FILE  | wc -l)
+  if [ -z "$number_of_nodes" ] || [ $number_of_nodes -le 1 ]
   then
-     support_nodes=1
-     thor_nodes=$(expr $number_of_nodes \- 1)
-     roxie_nodes=$(expr $number_of_nodes \- 1)
-     slaves_per_node=1
+     return 0
   fi
 
-  juju-log "Stop HPCC"
+  calculate_nodes $number_of_nodes
+
+  #juju-log "Stop HPCC"
   # Following command return 3 even stop succeeds
   # It will be fixed in HPCC 5.0 release
-  service hpcc-init stop || :
+  service hpcc-init stop > /dev/null 2>&1 || :
 
   juju-log "Run envgen ${ENV_GEN} -env ${CONFIG_DIR}/${ENV_XML_FILE} -ipfile ${IP_FILE} -thornodes ${thor_nodes} -slavesPerNode ${slaves_per_node} -roxienodes ${roxie_nodes} -supportnodes ${support_nodes}"
   "${ENV_GEN}" -env "${CONFIG_DIR}/${ENV_XML_FILE}" -ipfile "${IP_FILE}" -thornodes "${thor_nodes}" -slavesPerNode "${slaves_per_node}" -roxienodes "${roxie_nodes}" -supportnodes "${support_nodes}"
   [ $? -ne 0 ] && exit 1
 
-  juju-log "Start HPCC"
-  start_and_check
-  rc=$?
-
   save_evngen_signature
   save_eclwatch_url
 
-  return $rc
 }
 
 ##
@@ -199,7 +332,7 @@ function save_eclwatch_url()
     }
   ' |  cut -d '"' -f 2)
 
-  unit=$(cat ${IP_UNIT_FILE} | grep ${eclwatch_ip} | cut -d ',' -f 2)
+  unit=$(cat ${IP_UNIT_FILE} | grep ${eclwatch_ip} | cut -d '/' -f -2)
   juju-log "set eclwatch unit:ip:port:  ${unit}:${eclwatch_ip}:${eclwatch_port}"
 
   echo "${unit}:${eclwatch_ip}:${eclwatch_port}" > ${ECLWATCH_URL_FILE}

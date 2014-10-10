@@ -46,7 +46,7 @@ LOCAL_URL_FILE=/tmp/${eclwatch_url_file}
 if [ -z "$unit_name" ]
 then
   get_service_information
-  unit_name=$(juju status | grep "${service_name}/" | \
+  unit_name=$(juju status | grep -e "^[[:space:]]*${service_name}/" | \
     /usr/bin/head -n 1 | cut -d: -f1)
 fi
 

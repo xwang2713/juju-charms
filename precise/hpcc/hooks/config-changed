@@ -1,31 +1,89 @@
 #!/bin/bash -e
 # config-changed occurs everytime a new configuration value is updated (juju set)
+#set -ux
 
 . ${CHARM_DIR}/hooks/hpcc-common
 
+
 ##
-## Check if need to generate environment.xml
+## Update HPCCSystems Platform
+##
+function update_hpcc()
+{
+
+  expect_version=$(config-get hpcc-version) 
+  [ -n "$expect_version" ] || return 0 
+
+  expect_version=$(echo $expect_version | sed 's/-//') 
+
+  if [ "$Distributor_ID" == "Ubuntu" ]
+  then
+     hpcc_version=$(dpkg -l | grep hpccsystems-platform | awk '{print $3}')
+  elif [ "$Distributor_ID" == "CentOS" ]
+  then
+     hpcc_version=$(rpm -qi hpccsystems-platform | \
+             grep -e "^Release " | awk '{print $3}')
+  fi
+
+  [ "$hpcc_version" != "$expect_version" ] || return 0
+
+  download_hpcc_platform
+  install_hpcc_platform
+}
+
+
+##
+## Update ssh keys
+##
+function update_ssh_keys()
+{
+  PUB_KEY=$(config-get ssh-key-public)
+  PRI_KEY=$(config-get ssh-key-private)
+  fix_private_key
+  parse_env_config
+
+  cur_pub_key=$(cat $PATH_HOME/.ssh/id_rsa.pub)
+  cur_pri_key=$(cat $PATH_HOME/.ssh/id_rsa)
+
+  if [ "$PUB_KEY" = "$cur_pub_key" ] && [ "$PRI_KEY" = "$cur_pri_key" ]
+  then
+     return 0
+  fi
+
+  set_ssh_keys
+}
+
+
+##
+## Reconfigure HPCC 
+##
+function configure_hpcc()
+{
+  [  -e $IP_FILE ] || return 0
+
+  number_of_nodes=$(cat $IP_FILE  | wc -l)
+  if [ -z "$number_of_nodes" ] || [ $number_of_nodes -le 1 ]
+  then
+     return 0
+  fi
+
+  calculate_nodes $number_of_nodes
+  _signature="${support_nodes}-${roxie_nodes}-${thor_nodes}-${slaves_per_node}"
+  _saved_signature=$(cat $SIGNATURE_FILE)
+ 
+  [ "$_signature" != "$_saved_signature" ] || return 0 
+  configure_cluster
+  
+}
+
+
+
+##
+## MAIN
 ##
 
-envgen_signature=$(config-get envgen-signature)
-juju-log "envgen_signature: $envgen_signature"
-[ -z "${envgen_signature}" ] && exit 0
-
-SIGNATURE_FILE=${JUJU_HPCC_DIR}/env_signature.txt
-if [ -e ${SIGNATURE_FILE} ]
-then
-    saved_signature=$(head -n 1 $SIGNATURE_FILE)
-    juju-log "saved_signature: $saved_signature"
-    [ "$saved_signature" == "$envgen_signature" ] && exit 0
-fi
-
-[ ! -e $IP_FILE ] && exit 0
-
-get_envgen_configuration
-
-composed_signature="${support_nodes}-${roxie_nodes}-${thor_nodes}-${slaves_per_node}"
-juju-log "composed_signature: $composed_signature"
-[ "$composed_signature" != "$envgen_signature" ] && exit 0
-
-
-configure_cluster
+get_os_info
+update_hpcc
+update_ssh_keys
+configure_hpcc
+start_and_check

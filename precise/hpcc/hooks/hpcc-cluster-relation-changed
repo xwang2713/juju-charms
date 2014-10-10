@@ -14,7 +14,7 @@ juju-log $JUJU_REMOTE_UNIT modified its settings
 
 
 LOCAL_IP=$(head -n 1  $LOCAL_IP_FILE) 
-echo "${LOCAL_IP};,$JUJU_UNIT_NAME" > ${IP_UNIT_FILE}
+echo "${JUJU_UNIT_NAME}/${LOCAL_IP};" > ${IP_UNIT_FILE}
 
 RESET_SSH_KEYS=$(relation-get reset-ssh-keys)
 
@@ -27,16 +27,14 @@ do
    if [ -n "${UNIT_ADDRESS}" ]
    then
       TOTAL_UNITS=$(expr ${TOTAL_UNITS} \+ 1)
-      echo "${UNIT_ADDRESS};,${UNIT}" >> "${IP_UNIT_FILE}"
+      echo "${UNIT}/${UNIT_ADDRESS};" >> "${IP_UNIT_FILE}"
    fi
 done
 
 ##
 ## Sort IPs
 ##
-cat $IP_UNIT_FILE | cut -d',' -f 1 | \
-   sort -n -t . -k 1,1 -k 2,2 -k 3,3 -k 4,4  > $IP_FILE
-
+cat $IP_UNIT_FILE | sort -n -t '/' -k 2,2 | cut -d '/' -f 3 > $IP_FILE
 LOWEST_IP=$(head -n 1 $IP_FILE | cut -d ';' -f1)
 
 
@@ -51,11 +49,11 @@ then
      PRI_KEY=$(relation-get ssh-key-private)
      if [ -z "$PUB_KEY" ] || [ -z "$PRI_KEY" ] 
      then
-        create_and_set_ssh_keys
+        create_and_set_ssh_keys 1
      fi
   else
      LOWEST_IP_UNIT=$(cat ${IP_UNIT_FILE} | grep "${LOWEST_IP}" | \
-        cut -d',' -f 2)
+        cut -d '/' -f -2)
      # Wait lowest ip host to set ssh keys
      wait_ssk_key_counter=10
      while [ $wait_ssk_key_counter -gt 0 ]
@@ -90,23 +88,6 @@ fi
 
 [  ${TOTAL_UNITS}  -eq 1 ] && exit 0
 
-##
-## If auto-gen set to 0 we need manually trigger
-#  configure_cluster by running bin/config_hpcc.sh script later
-##
-auto_gen=$(config-get auto-gen)
-juju-log "auto_gen $auto_gen"
-[  ${auto_gen}  -eq 0 ] && exit 0
 
-
-if [ ${auto_gen} -eq 1 ]
-then
-   configure_cluster ${TOTAL_UNITS}
-   rc=$?
-else
-   get_envgen_configuration
-   configure_cluster
-   rc=$?
-fi
-
-exit $rc
+configure_cluster ${TOTAL_UNITS} || exit 1
+start_and_check 

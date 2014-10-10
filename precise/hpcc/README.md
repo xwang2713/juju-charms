@@ -9,6 +9,8 @@ An HPCC environment can include only Thor clusters, or both Thor and Roxie clust
 See [How it Works](http://www.hpccsystems.com/Why-HPCC/How-it-works)  for more details. 
 
 See [System Requirements](http://hpccsystems.com/download/docs/system-requirements) for  hardware details. 
+> Please note, your Juju instance must have at least 4GB of RAM. To increase the memory for a unit, run this command:
+   `juju set-constraints mem=4G`
 
 The HPCC Juju Charm encapsulates best practice configurations for the HPCC  Systems Platform.  You can use a Juju Charm to stand up an HPCC Platform on:
 
@@ -62,28 +64,38 @@ If you have multiple nodes, the ECL Watch node will be the lowest IP address (fi
 
 When you use the `juju add-unit` command to add nodes, scripts are called automatically to provide a default configuration. 
 
-If you want to configure manually, set **auto-gen** to **0**, wait for all nodes to be in a "started" state, then call the **config_hpcc.sh**  script using the following parameters:
-
-`./config_hpcc.sh -thornodes <# of thor nodes> -roxienodes <# of roxie nodes> -supportnodes <# of support nodes> -slavespernode <#of thor slaves per node> 
-`
-
-Another useful script reports the URL for the ECL Watch node. Call the **get-url.sh** script to display the cluster configuration and the URL for the ECL Watch service.
-
 ### ssh-keys ###
 The hpcc charm automatically generates a key pair  (*id\_rsa*  &  *id\_rsa.pub*) to configure nodes. 
 
 If you already have your own key pair and wish to use it, copy and paste their contents into the two variables (*ssh-key-public* and *ssh-key-private*) in the configuration file (config.yaml) or in the Juju canvas configuration settings.  
 
+Alternately, you can set these using this command: 
+
+    juju set <hpcc service name> ssh-key-public=<public key> ssh-key-private=<private key>
+
+###To update from prior version
+
+You can set the **hpcc-version** in the configuration file (config.yaml) or in the Juju canvas configuration settings.
+
+Alternately, you can set these using this command: 
+    juju set <hpcc service name> hpcc-version=<new version> package-checksum=<checksum string>
+
 ### Verifying the checksum
 The charm uses an md5sum to verify the checksum of the HPCC platform  package before installing.  
 
-For this version of the charm, it is set to check the md5sum for the Community Edition Version 4.2.0-4 for Ubuntu 12.04. To verify a different version, edition, or OS version, change the value of the md5sum in the package-checksum variable in config.yaml. 
+For this version of the charm, it is set to check the md5sum for the Community Edition Version 5.0.0-3 for Ubuntu 12.04 amd64. To verify a different version, edition, or OS version, change the value of the md5sum in the package-checksum variable in config.yaml. You can get other package checksums from [http://hpccsystems.com/download](http://hpccsystems.com/download)
 
- 
+###To reconfigure your topology
 
-### AWS Cloud
+You can reconfigure the topology of your system by setting the values for **support-nodes, slaves-per-node, roxie-ratio, thor-ratio** in the configuration file (config.yaml) or in the Juju canvas configuration settings.
 
-When deploying to Amazon Web Services Cloud, the charm automatically opens for external access, the following ports:
+Alternately, you can set these using this command: 
+
+    juju set <hpcc service name> roxie-ratio=<floating point value 0.0 – 1.0> > thor-ratio=<floating point value 0.0 – 1.0>
+
+### Ports
+
+The charm automatically opens for external access, the following ports:
 
 - Port **8010** for ECLWatch access
 - Port **8002** for WsECL access.

@@ -16,7 +16,7 @@ fix_private_key
 if [ -z "$PUB_KEY" ] || [ -z "$PUB_KEY" ]
 then
    relation-set reset-ssh-keys=1
-   create_and_set_ssh_keys
+   create_and_set_ssh_keys 1
 else
    relation-set reset-ssh-keys=0
 fi

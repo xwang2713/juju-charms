@@ -29,14 +29,8 @@ function usage()
        -slavespernode <number of thor slaves per node>:
           Number of thor nodes per slave.
 
-
        -list:
           List envgen optios only.
-
-       -updateonly :
-          Update config values only. Will not trigger envgen. This is
-          mainly for update values before add new nodes. So new nodes
-          relation changed hooks will generate desired environment.xml.
 
     The value with "+" mean add to original number.
     The value with "-" mean substract from original number.
@@ -71,16 +65,21 @@ function get_current_config()
        value=$(echo $item | cut -d '=' -f2)
        [ -n "$key" ] && config["$key"]=$value
    done
-   current_signature="${config[supportnodes]}-${config[roxienodes]}-${config[thornodes]}-${config[slavesPerNode]}"
+
+   compute_nodes=$(expr ${service[unit_number]} \- ${config[support-nodes]})
+   thor_nodes=$(echo "scale=0; (($compute_nodes * ${config[thor-ratio]}) / ${config[slaves-per-node]})/1" | bc)
+   roxie_nodes=$(echo "scale=0; ($compute_nodes * ${config[roxie-ratio]})/1" | bc)
+
+   current_signature="${config[support-nodes]}-${roxie_nodes}-${thor_nodes}-${config[slaves-per-node]}"
 }
 
 
 function display_current_configuration()
 {
-   printf "%s%-15s: %8d\n" "$INDENT" "Support nodes" ${config[supportnodes]}
-   printf "%s%-15s: %8d\n" "$INDENT" "Roxie nodes" ${config[roxienodes]}
-   printf "%s%-15s: %8d\n" "$INDENT" "Thor nodes" ${config[thornodes]}
-   printf "%s%-15s: %8d\n" "$INDENT" "Slaves per node" ${config[slavesPerNode]}
+   printf "%s%-15s: %8d\n" "$INDENT" "Support nodes" ${config[support-nodes]}
+   printf "%s%-15s: %8d\n" "$INDENT" "Roxie nodes" ${roxie_nodes}
+   printf "%s%-15s: %8d\n" "$INDENT" "Thor nodes" ${thor_nodes}
+   printf "%s%-15s: %8d\n" "$INDENT" "Slaves per node" ${config[slaves-per-node]}
 
    #envgen_status="Current environment.xml probably already has above settings"
    #if [ "$current_signation" != "${config[slavesPerNode]}" ]
@@ -110,37 +109,35 @@ function update_value()
 
 }
 
+
 function update_configuration()
 {
    printf "%s%-15s  %8s %8s\n" "$INDENT" "ENVGEN OPTIONS" "BEFORE" "NOW"
    printf "%s%s\n" "$INDENT" "----------------------------------"
 
-   supportnodes=$(update_value ${config[supportnodes]}  ${inputs[supportnodes]})
+   supportnodes=$(update_value ${config[support-nodes]}  ${inputs[supportnodes]})
    printf "%s%-15s: %8d %8d\n" "$INDENT" "Support nodes" \
-           ${config[supportnodes]} $supportnodes
-   config[supportnodes]=$supportnodes
+           ${config[support-nodes]} $supportnodes
+   config[support-nodes]=$supportnodes
 
-   roxienodes=$(update_value ${config[roxienodes]}  ${inputs[roxienodes]})
+   roxienodes=$(update_value ${roxie_nodes}  ${inputs[roxienodes]})
    printf "%s%-15s: %8d %8d\n" "$INDENT" "Roxie nodes" \
-           ${config[roxienodes]} $roxienodes
-   config[roxienodes]=$roxienodes
+           ${roxie_nodes} $roxienodes
+   roxie_nodes=$roxienodes
+   config[roxie-ratio]=$(echo "scale=4; ( $roxie_nodes / $compute_nodes )" | bc)
 
-   thornodes=$(update_value ${config[thornodes]}  ${inputs[thornodes]})
+   thornodes=$(update_value ${thor_nodes}  ${inputs[thornodes]})
    printf "%s%-15s: %8d %8d\n" "$INDENT" "Thor nodes" \
-           ${config[thornodes]} $thornodes
-   config[thornodes]=$thornodes
+           ${thor_nodes} $thornodes
+   thor_nodes=$thornodes
+   config[thor-ratio]=$(echo "scale=4; ( ($thor_nodes * ${config[slaves-per-node]}) / $compute_nodes )" | bc)
 
-   slavesPerNode=$(update_value ${config[slavesPerNode]}  ${inputs[slavesPerNode]})
+   slavesPerNode=$(update_value ${config[slaves-per-node]}  ${inputs[slavesPerNode]})
    printf "%s%-15s: %8d %8d\n" "$INDENT" "Slaves Per Node" \
-           ${config[slavesPerNode]} $slavesPerNode
-   config[slavesPerNode]=$slavesPerNode
+           ${config[slaves-per-node]} $slavesPerNode
+   config[slaves-per-node]=$slavesPerNode
 
    printf "\n"
-
-   if [ $update_only -eq 0 ]
-   then
-      config[envgen_signature]="${config[supportnodes]}-${config[roxienodes]}-${config[thornodes]}-${config[slavesPerNode]}"
-   fi
 
 }
 
@@ -200,8 +197,6 @@ do
             ;;
     -list) list_only=1
             ;;
-    -updateonly) update_only=1
-            ;;
     *) usage
        exit 0
   esac
@@ -235,10 +230,8 @@ fi
 
 update_configuration
 
-
 juju set ${service[service_name]} \
-           envgen-signature=${config[envgen_signature]} \
-           thornodes=${config[thornodes]} \
-           roxienodes=${config[roxienodes]} \
-           supportnodes=${config[supportnodes]} \
-           slavesPerNode=${config[slavesPerNode]}
+           thor-ratio=${config[thor-ratio]} \
+           roxie-ratio=${config[roxie-ratio]} \
+           support-nodes=${config[support-nodes]} \
+           slaves-per-node=${config[slaves-per-node]}
